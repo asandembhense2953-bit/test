@@ -280,6 +280,26 @@
     0%, 100% { border-color: var(--green); box-shadow: 0 0 0 9999px rgba(0,0,0,0.4), 0 0 20px rgba(0,200,150,0.3); }
     50% { border-color: #00ffbc; box-shadow: 0 0 0 9999px rgba(0,0,0,0.4), 0 0 30px rgba(0,200,150,0.6); }
   }
+  @keyframes pulse-detected {
+    0%, 100% { border-color: var(--amber); box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 30px rgba(255,179,71,0.7); }
+    50% { border-color: #ffd080; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 50px rgba(255,179,71,1); }
+  }
+  @keyframes pulse-success {
+    0%, 100% { border-color: var(--green); box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 40px rgba(0,200,150,0.9); }
+    50% { border-color: #00ffbc; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 60px rgba(0,255,188,1); }
+  }
+  .scan-frame { animation: pulse-border 1.5s ease-in-out infinite; }
+  .scan-frame.detected { animation: pulse-detected 0.4s ease-in-out infinite; }
+  .scan-frame.success { animation: pulse-success 0.3s ease-in-out infinite; }
+
+  @keyframes dot-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+  .dot-scanning { background: var(--green) !important; animation: dot-pulse 1s ease-in-out infinite; }
+  .dot-detected { background: var(--amber) !important; }
+  .dot-success  { background: var(--green) !important; }
+  .dot-error    { background: var(--danger) !important; }
   .scan-status {
     font-family: 'Space Mono', monospace;
     font-size: 0.75rem;
@@ -588,19 +608,32 @@
     <div id="kiosk-scan-view">
       <div class="kiosk-screen">
         <h2>🏥 SmartClinic</h2>
-        <p>Hold your clinic card up to the camera to check in</p>
+        <p>Hold your clinic card QR code up to the camera</p>
+
+        <!-- Camera always on -->
         <div class="camera-box">
           <video id="camera-video" autoplay playsinline muted></video>
           <canvas id="camera-canvas"></canvas>
           <div class="scan-overlay">
-            <div class="scan-frame"></div>
+            <div class="scan-frame" id="scan-frame"></div>
           </div>
         </div>
-        <div class="scan-status" id="scan-status">● Scanning for QR code...</div>
+
+        <!-- Live status bar -->
+        <div id="scan-status-bar" style="
+          display:flex;align-items:center;justify-content:center;gap:10px;
+          padding:12px 18px;border-radius:10px;margin-bottom:16px;
+          background:rgba(255,255,255,0.04);border:1px solid var(--border);
+          font-family:'Space Mono',monospace;font-size:0.78rem;
+          transition:all 0.3s;">
+          <span id="scan-dot" style="width:8px;height:8px;border-radius:50%;background:var(--text-dim);flex-shrink:0;transition:background 0.3s;"></span>
+          <span id="scan-status">Starting camera…</span>
+        </div>
+
         <div class="divider"></div>
-        <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:12px;">No card? Enter your ID number:</div>
+        <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:12px;">No card? Enter your Patient ID or ID number:</div>
         <div class="flex" style="gap:8px;">
-          <input type="text" id="manual-id-input" placeholder="ID Number" style="flex:1;">
+          <input type="text" id="manual-id-input" placeholder="Patient ID or ID Number" style="flex:1;">
           <button class="btn btn-outline" onclick="manualKioskCheckin()">Check In</button>
         </div>
       </div>
@@ -912,10 +945,63 @@ function downloadCard() {
 }
 
 // ═══════════════════════════════════════════════
+// STATUS HELPER
+// ═══════════════════════════════════════════════
+function setScanStatus(state, message) {
+  // state: 'idle' | 'scanning' | 'detected' | 'processing' | 'success' | 'error'
+  const dot = document.getElementById('scan-dot');
+  const text = document.getElementById('scan-status');
+  const bar = document.getElementById('scan-status-bar');
+  const frame = document.getElementById('scan-frame');
+  if (!dot || !text) return;
+
+  dot.className = '';
+  frame.className = 'scan-frame';
+  bar.style.borderColor = '';
+  bar.style.background = '';
+
+  switch (state) {
+    case 'scanning':
+      dot.classList.add('dot-scanning');
+      bar.style.borderColor = 'rgba(0,200,150,0.2)';
+      break;
+    case 'detected':
+      dot.classList.add('dot-detected');
+      frame.classList.add('detected');
+      bar.style.borderColor = 'rgba(255,179,71,0.4)';
+      bar.style.background = 'rgba(255,179,71,0.06)';
+      break;
+    case 'processing':
+      dot.classList.add('dot-detected');
+      frame.classList.add('detected');
+      bar.style.borderColor = 'rgba(255,179,71,0.4)';
+      bar.style.background = 'rgba(255,179,71,0.06)';
+      break;
+    case 'success':
+      dot.classList.add('dot-success');
+      frame.classList.add('success');
+      bar.style.borderColor = 'rgba(0,200,150,0.4)';
+      bar.style.background = 'rgba(0,200,150,0.06)';
+      break;
+    case 'error':
+      dot.classList.add('dot-error');
+      bar.style.borderColor = 'rgba(255,90,90,0.3)';
+      bar.style.background = 'rgba(255,90,90,0.05)';
+      break;
+    default:
+      break;
+  }
+  text.textContent = message;
+}
+
+// ═══════════════════════════════════════════════
 // CAMERA / QR SCANNING
 // ═══════════════════════════════════════════════
+let qrLockout = false; // prevent double-fire while processing
+
 async function startCamera() {
   if (cameraStream) return;
+  setScanStatus('idle', 'Starting camera…');
   try {
     cameraStream = await navigator.mediaDevices.getUserMedia({
       video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
@@ -923,10 +1009,11 @@ async function startCamera() {
     const video = document.getElementById('camera-video');
     video.srcObject = cameraStream;
     await video.play().catch(() => {});
-    document.getElementById('scan-status').textContent = '● Scanning for QR code...';
-    scanInterval = setInterval(scanFrame, 250);
+    setScanStatus('scanning', '● Scanning for QR code…');
+    qrLockout = false;
+    scanInterval = setInterval(scanFrame, 150);
   } catch (e) {
-    document.getElementById('scan-status').textContent = 'Camera unavailable — use manual ID entry below';
+    setScanStatus('error', '⚠ Camera unavailable — use manual entry below');
   }
 }
 
@@ -939,20 +1026,34 @@ function stopCamera() {
 }
 
 function scanFrame() {
+  if (qrLockout) return;
   const video = document.getElementById('camera-video');
   const canvas = document.getElementById('camera-canvas');
-  if (!video.videoWidth || video.readyState < 2) return;
+  if (!video || !video.videoWidth || video.readyState < 2) return;
+
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
   const ctx = canvas.getContext('2d');
   ctx.drawImage(video, 0, 0);
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
+  const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
+
   if (code && code.data.startsWith('PAT-')) {
-    stopCamera();
-    processCheckin(code.data, 'QR_Scan');
+    qrLockout = true;
+    setScanStatus('detected', '◉ QR code captured — reading…');
+
+    setTimeout(() => {
+      setScanStatus('processing', '⟳ Verifying patient record…');
+
+      setTimeout(() => {
+        stopCamera();
+        processCheckin(code.data, 'QR_Scan');
+      }, 700);
+    }, 500);
   }
 }
+
+function refreshKioskList() { /* no-op: camera is primary now */ }
 
 function manualKioskCheckin() {
   const idInput = document.getElementById('manual-id-input').value.trim();
@@ -969,13 +1070,13 @@ function manualKioskCheckin() {
 function processCheckin(patientId, source) {
   const patient = patients.find(p => p.patientId === patientId);
   if (!patient) {
-    document.getElementById('scan-status').textContent = '✗ Patient not found. See receptionist.';
-    startCamera();
+    setScanStatus('error', '✗ Patient not found — see receptionist');
+    setTimeout(() => { qrLockout = false; setScanStatus('scanning', '● Scanning for QR code…'); startCamera(); }, 2500);
     return;
   }
   if (patient.checkedIn) {
-    document.getElementById('scan-status').textContent = '✗ Already checked in.';
-    setTimeout(() => startCamera(), 2000);
+    setScanStatus('error', '✗ Already checked in today');
+    setTimeout(() => { qrLockout = false; setScanStatus('scanning', '● Scanning for QR code…'); startCamera(); }, 2500);
     return;
   }
 
@@ -1006,8 +1107,11 @@ function processCheckin(patientId, source) {
   updateSensorLog();
 
   // Show success on kiosk
-  document.getElementById('kiosk-scan-view').style.display = 'none';
-  document.getElementById('kiosk-success-view').style.display = 'block';
+  setScanStatus('success', '✓ Check-in complete!');
+  setTimeout(() => {
+    document.getElementById('kiosk-scan-view').style.display = 'none';
+    document.getElementById('kiosk-success-view').style.display = 'block';
+  }, 400);
   document.getElementById('kiosk-queue-num').textContent = queuePos;
   document.getElementById('kiosk-patient-name').textContent = patient.name;
   document.getElementById('kiosk-doctor').textContent = patient.doctor;
@@ -1020,6 +1124,7 @@ function resetKiosk() {
   document.getElementById('kiosk-scan-view').style.display = 'block';
   document.getElementById('kiosk-success-view').style.display = 'none';
   document.getElementById('manual-id-input').value = '';
+  qrLockout = false;
   stopCamera();
   startCamera();
 }
