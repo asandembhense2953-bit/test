@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SmartClinic — Sensor 1 Demo</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script src="https://unpkg.com/@zxing/browser@0.1.1/umd/index.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap');
@@ -229,31 +229,32 @@
     background: var(--navy-light);
     border: 2px solid var(--border);
     border-radius: 20px;
-    padding: 40px 32px;
+    padding: 24px 20px;
     text-align: center;
-    max-width: 480px;
+    max-width: 100%;
     margin: 0 auto;
   }
   .kiosk-screen h2 {
     font-family: 'Space Mono', monospace;
     font-size: 1rem;
     color: var(--green);
-    margin-bottom: 8px;
+    margin-bottom: 6px;
   }
   .kiosk-screen p {
     color: var(--text-dim);
     font-size: 0.875rem;
-    margin-bottom: 24px;
+    margin-bottom: 16px;
   }
 
   .camera-box {
     background: #000;
-    border-radius: 12px;
+    border-radius: 16px;
     overflow: hidden;
     position: relative;
     width: 100%;
-    aspect-ratio: 4/3;
-    margin-bottom: 20px;
+    aspect-ratio: 1/1;
+    margin-bottom: 16px;
+    border: 2px solid var(--border);
   }
   #camera-video {
     width: 100%;
@@ -269,11 +270,11 @@
     justify-content: center;
   }
   .scan-frame {
-    width: 160px;
-    height: 160px;
-    border: 2px solid var(--green);
-    border-radius: 12px;
-    box-shadow: 0 0 0 9999px rgba(0,0,0,0.4);
+    width: min(260px, 65vw);
+    height: min(260px, 65vw);
+    border: 3px solid var(--green);
+    border-radius: 16px;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.35);
     animation: pulse-border 1.5s ease-in-out infinite;
   }
   @keyframes pulse-border {
@@ -498,8 +499,10 @@
   @media (max-width: 600px) {
     .form-grid { grid-template-columns: 1fr; }
     .dash-grid { grid-template-columns: 1fr 1fr; }
-    nav { padding: 14px 16px; }
-    .container { padding: 20px 16px; }
+    nav { padding: 12px 12px; }
+    .nav-tab { padding: 7px 10px; font-size: 0.78rem; }
+    .container { padding: 12px 8px; }
+    .kiosk-screen { padding: 16px 12px; border-radius: 14px; }
   }
 </style>
 </head>
@@ -754,8 +757,6 @@ let patients = [];
 let queue = [];
 let sensorLog = [];
 let queueCounter = 1;
-let cameraStream = null;
-let scanInterval = null;
 let currentRegistered = null;
 
 // ═══════════════════════════════════════════════
@@ -995,65 +996,62 @@ function setScanStatus(state, message) {
 }
 
 // ═══════════════════════════════════════════════
-// CAMERA / QR SCANNING
+// CAMERA / QR SCANNING — ZXing engine
 // ═══════════════════════════════════════════════
-let qrLockout = false; // prevent double-fire while processing
+let zxingControls = null;
+let qrLockout = false;
 
 async function startCamera() {
-  if (cameraStream) return;
+  if (zxingControls) return;
   setScanStatus('idle', 'Starting camera…');
   try {
-    cameraStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
-    });
+    const codeReader = new ZXingBrowser.BrowserMultiFormatReader();
     const video = document.getElementById('camera-video');
-    video.srcObject = cameraStream;
-    await video.play().catch(() => {});
+
+    zxingControls = await codeReader.decodeFromConstraints(
+      { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } },
+      video,
+      (result, err, controls) => {
+        if (qrLockout) return;
+        if (result) {
+          const text = result.getText();
+          if (text.startsWith('PAT-')) {
+            qrLockout = true;
+            setScanStatus('detected', '◉ QR code captured — reading…');
+            setTimeout(() => {
+              setScanStatus('processing', '⟳ Verifying patient record…');
+              setTimeout(() => {
+                controls.stop();
+                zxingControls = null;
+                processCheckin(text, 'QR_Scan');
+              }, 700);
+            }, 500);
+          }
+        }
+      }
+    );
+
     setScanStatus('scanning', '● Scanning for QR code…');
-    qrLockout = false;
-    scanInterval = setInterval(scanFrame, 150);
   } catch (e) {
     setScanStatus('error', '⚠ Camera unavailable — use manual entry below');
   }
 }
 
 function stopCamera() {
-  if (cameraStream) {
-    cameraStream.getTracks().forEach(t => t.stop());
-    cameraStream = null;
+  if (zxingControls) {
+    try { zxingControls.stop(); } catch(e) {}
+    zxingControls = null;
   }
-  if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
-}
-
-function scanFrame() {
-  if (qrLockout) return;
+  // Also kill any raw media tracks on the video element
   const video = document.getElementById('camera-video');
-  const canvas = document.getElementById('camera-canvas');
-  if (!video || !video.videoWidth || video.readyState < 2) return;
-
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(video, 0, 0);
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
-
-  if (code && code.data.startsWith('PAT-')) {
-    qrLockout = true;
-    setScanStatus('detected', '◉ QR code captured — reading…');
-
-    setTimeout(() => {
-      setScanStatus('processing', '⟳ Verifying patient record…');
-
-      setTimeout(() => {
-        stopCamera();
-        processCheckin(code.data, 'QR_Scan');
-      }, 700);
-    }, 500);
+  if (video && video.srcObject) {
+    video.srcObject.getTracks().forEach(t => t.stop());
+    video.srcObject = null;
   }
 }
 
-function refreshKioskList() { /* no-op: camera is primary now */ }
+function scanFrame() {} // no-op — ZXing handles its own loop
+function refreshKioskList() {} // no-op
 
 function manualKioskCheckin() {
   const idInput = document.getElementById('manual-id-input').value.trim();
