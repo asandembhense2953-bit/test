@@ -7,7 +7,6 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap');
 
@@ -489,10 +488,10 @@
 <nav>
   <div class="logo">Smart<span>Clinic</span></div>
   <div class="nav-tabs">
-    <button class="nav-tab active" onclick="showSection('register')">Register</button>
-    <button class="nav-tab" onclick="showSection('kiosk')">Kiosk</button>
-    <button class="nav-tab" onclick="showSection('receptionist')">Receptionist</button>
-    <button class="nav-tab" onclick="showSection('sensorlog')">Sensor Log</button>
+    <button class="nav-tab active" onclick="showSection('register', event)">Register</button>
+    <button class="nav-tab" onclick="showSection('kiosk', event)">Kiosk</button>
+    <button class="nav-tab" onclick="showSection('receptionist', event)">Receptionist</button>
+    <button class="nav-tab" onclick="showSection('sensorlog', event)">Sensor Log</button>
   </div>
 </nav>
 
@@ -729,11 +728,11 @@ let currentRegistered = null;
 // ═══════════════════════════════════════════════
 // NAVIGATION
 // ═══════════════════════════════════════════════
-function showSection(name) {
+function showSection(name, evt) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('section-' + name).classList.add('active');
-  event.target.classList.add('active');
+  if (evt && evt.target) evt.target.classList.add('active');
 
   if (name === 'kiosk') startCamera();
   else stopCamera();
@@ -918,12 +917,14 @@ function downloadCard() {
 async function startCamera() {
   if (cameraStream) return;
   try {
-    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
     const video = document.getElementById('camera-video');
     video.srcObject = cameraStream;
-    video.play();
-    scanInterval = setInterval(scanFrame, 300);
+    await video.play().catch(() => {});
     document.getElementById('scan-status').textContent = '● Scanning for QR code...';
+    scanInterval = setInterval(scanFrame, 250);
   } catch (e) {
     document.getElementById('scan-status').textContent = 'Camera unavailable — use manual ID entry below';
   }
@@ -940,13 +941,13 @@ function stopCamera() {
 function scanFrame() {
   const video = document.getElementById('camera-video');
   const canvas = document.getElementById('camera-canvas');
-  if (!video.videoWidth) return;
+  if (!video.videoWidth || video.readyState < 2) return;
   canvas.width = video.videoWidth;
   canvas.height = video.videoHeight;
   const ctx = canvas.getContext('2d');
   ctx.drawImage(video, 0, 0);
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const code = jsQR(imageData.data, imageData.width, imageData.height);
+  const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'dontInvert' });
   if (code && code.data.startsWith('PAT-')) {
     stopCamera();
     processCheckin(code.data, 'QR_Scan');
@@ -1019,6 +1020,7 @@ function resetKiosk() {
   document.getElementById('kiosk-scan-view').style.display = 'block';
   document.getElementById('kiosk-success-view').style.display = 'none';
   document.getElementById('manual-id-input').value = '';
+  stopCamera();
   startCamera();
 }
 
