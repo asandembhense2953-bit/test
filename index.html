@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <title>SmartClinic — Sensor 1 Demo</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<script src="https://unpkg.com/@zxing/browser@0.1.1/umd/index.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap');
@@ -229,32 +229,32 @@
     background: var(--navy-light);
     border: 2px solid var(--border);
     border-radius: 20px;
-    padding: 24px 20px;
+    padding: 40px 32px;
     text-align: center;
-    max-width: 100%;
+    max-width: 480px;
     margin: 0 auto;
   }
   .kiosk-screen h2 {
     font-family: 'Space Mono', monospace;
     font-size: 1rem;
     color: var(--green);
-    margin-bottom: 6px;
+    margin-bottom: 8px;
   }
   .kiosk-screen p {
     color: var(--text-dim);
     font-size: 0.875rem;
-    margin-bottom: 16px;
+    margin-bottom: 24px;
   }
 
   .camera-box {
     background: #000;
-    border-radius: 16px;
+    border-radius: 12px;
     overflow: hidden;
     position: relative;
     width: 100%;
-    aspect-ratio: 1/1;
-    margin-bottom: 16px;
-    border: 2px solid var(--border);
+    aspect-ratio: 4/3;
+    margin-bottom: 20px;
+    cursor: pointer;
   }
   #camera-video {
     width: 100%;
@@ -270,26 +270,26 @@
     justify-content: center;
   }
   .scan-frame {
-    width: min(260px, 65vw);
-    height: min(260px, 65vw);
-    border: 3px solid var(--green);
-    border-radius: 16px;
-    box-shadow: 0 0 0 9999px rgba(0,0,0,0.35);
+    width: 200px;
+    height: 200px;
+    border: 2px solid var(--green);
+    border-radius: 12px;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.4);
     animation: pulse-border 1.5s ease-in-out infinite;
+    transition: all 0.2s;
   }
   @keyframes pulse-border {
     0%, 100% { border-color: var(--green); box-shadow: 0 0 0 9999px rgba(0,0,0,0.4), 0 0 20px rgba(0,200,150,0.3); }
     50% { border-color: #00ffbc; box-shadow: 0 0 0 9999px rgba(0,0,0,0.4), 0 0 30px rgba(0,200,150,0.6); }
   }
   @keyframes pulse-detected {
-    0%, 100% { border-color: var(--amber); box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 30px rgba(255,179,71,0.7); }
-    50% { border-color: #ffd080; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 50px rgba(255,179,71,1); }
+    0%, 100% { border-color: var(--amber); box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 30px rgba(255,179,71,0.7); transform: scale(1); }
+    50% { border-color: #ffd080; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 50px rgba(255,179,71,1); transform: scale(1.05); }
   }
   @keyframes pulse-success {
-    0%, 100% { border-color: var(--green); box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 40px rgba(0,200,150,0.9); }
-    50% { border-color: #00ffbc; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 60px rgba(0,255,188,1); }
+    0%, 100% { border-color: var(--green); box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 40px rgba(0,200,150,0.9); transform: scale(1); }
+    50% { border-color: #00ffbc; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 60px rgba(0,255,188,1); transform: scale(1.05); }
   }
-  .scan-frame { animation: pulse-border 1.5s ease-in-out infinite; }
   .scan-frame.detected { animation: pulse-detected 0.4s ease-in-out infinite; }
   .scan-frame.success { animation: pulse-success 0.3s ease-in-out infinite; }
 
@@ -499,10 +499,9 @@
   @media (max-width: 600px) {
     .form-grid { grid-template-columns: 1fr; }
     .dash-grid { grid-template-columns: 1fr 1fr; }
-    nav { padding: 12px 12px; }
-    .nav-tab { padding: 7px 10px; font-size: 0.78rem; }
-    .container { padding: 12px 8px; }
-    .kiosk-screen { padding: 16px 12px; border-radius: 14px; }
+    nav { padding: 14px 16px; }
+    .container { padding: 20px 16px; }
+    .scan-frame { width: 160px; height: 160px; }
   }
 </style>
 </head>
@@ -520,9 +519,7 @@
 
 <div class="container">
 
-  <!-- ═══════════════════════════════════════════ -->
-  <!-- SECTION 1: REGISTER                        -->
-  <!-- ═══════════════════════════════════════════ -->
+  <!-- SECTION 1: REGISTER -->
   <div class="section active" id="section-register">
     <div class="page-title">Patient Registration</div>
     <div class="page-sub">Register once. Generate your permanent SmartClinic card.</div>
@@ -601,9 +598,7 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════ -->
-  <!-- SECTION 2: KIOSK                           -->
-  <!-- ═══════════════════════════════════════════ -->
+  <!-- SECTION 2: KIOSK -->
   <div class="section" id="section-kiosk">
     <div class="page-title">Check-In Kiosk</div>
     <div class="page-sub">Patient self-service screen near clinic entrance.</div>
@@ -613,8 +608,7 @@
         <h2>🏥 SmartClinic</h2>
         <p>Hold your clinic card QR code up to the camera</p>
 
-        <!-- Camera always on -->
-        <div class="camera-box">
+        <div class="camera-box" onclick="triggerCameraFocus()">
           <video id="camera-video" autoplay playsinline muted></video>
           <canvas id="camera-canvas"></canvas>
           <div class="scan-overlay">
@@ -622,7 +616,6 @@
           </div>
         </div>
 
-        <!-- Live status bar -->
         <div id="scan-status-bar" style="
           display:flex;align-items:center;justify-content:center;gap:10px;
           padding:12px 18px;border-radius:10px;margin-bottom:16px;
@@ -658,9 +651,7 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════ -->
-  <!-- SECTION 3: RECEPTIONIST                    -->
-  <!-- ═══════════════════════════════════════════ -->
+  <!-- SECTION 3: RECEPTIONIST -->
   <div class="section" id="section-receptionist">
     <div class="page-title">Receptionist Dashboard</div>
     <div class="page-sub">Live queue management and manual override panel.</div>
@@ -731,9 +722,7 @@
     </div>
   </div>
 
-  <!-- ═══════════════════════════════════════════ -->
-  <!-- SECTION 4: SENSOR LOG                      -->
-  <!-- ═══════════════════════════════════════════ -->
+  <!-- SECTION 4: SENSOR LOG -->
   <div class="section" id="section-sensorlog">
     <div class="page-title">SENSOR_READINGS Table</div>
     <div class="page-sub">Every check-in event logged automatically. This is your Sensor 1 data.</div>
@@ -747,43 +736,52 @@
     </div>
   </div>
 
-</div><!-- /container -->
+</div>
 
 <script>
-// ═══════════════════════════════════════════════
 // STATE
-// ═══════════════════════════════════════════════
 let patients = [];
 let queue = [];
 let sensorLog = [];
 let queueCounter = 1;
+let cameraStream = null;
+let scanInterval = null;
 let currentRegistered = null;
+let lastScanTime = 0;
+const SCAN_COOLDOWN = 2000; // 2 seconds cooldown between scans
 
-// ═══════════════════════════════════════════════
+// Check if libraries are loaded
+console.log('Libraries loaded:', {
+  QRCode: typeof QRCode !== 'undefined',
+  jsQR: typeof jsQR !== 'undefined',
+  jspdf: typeof jspdf !== 'undefined'
+});
+
 // NAVIGATION
-// ═══════════════════════════════════════════════
 function showSection(name, evt) {
   document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
   document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
   document.getElementById('section-' + name).classList.add('active');
   if (evt && evt.target) evt.target.classList.add('active');
 
-  if (name === 'kiosk') startCamera();
-  else stopCamera();
+  if (name === 'kiosk') {
+    setTimeout(() => startCamera(), 100);
+  } else {
+    stopCamera();
+  }
 
   if (name === 'receptionist') refreshDashboard();
 }
 
 function showInner(id, btn) {
-  btn.closest('.section').querySelectorAll('.inner-section').forEach(s => s.classList.remove('active'));
-  btn.closest('.section').querySelectorAll('.inner-tab').forEach(t => t.classList.remove('active'));
+  const section = btn.closest('.section');
+  section.querySelectorAll('.inner-section').forEach(s => s.classList.remove('active'));
+  section.querySelectorAll('.inner-tab').forEach(t => t.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   btn.classList.add('active');
 }
 
-// ═══════════════════════════════════════════════
 // REGISTRATION
-// ═══════════════════════════════════════════════
 function registerPatient() {
   const name = document.getElementById('reg-name').value.trim();
   const idNum = document.getElementById('reg-id').value.trim();
@@ -804,26 +802,24 @@ function registerPatient() {
   patients.push(patient);
   currentRegistered = patient;
 
-  // Show success
   document.getElementById('register-form-view').style.display = 'none';
   document.getElementById('register-success-view').style.display = 'block';
 
-  // Fill card
   document.getElementById('card-name').textContent = name;
   document.getElementById('card-patientid').textContent = patientId + ' · ' + idNum;
   document.getElementById('card-issued').textContent = 'Issued: ' + new Date().toLocaleDateString('en-ZA');
 
-  // Generate QR
+  // Generate QR with better settings
   document.getElementById('qr-output').innerHTML = '';
   new QRCode(document.getElementById('qr-output'), {
     text: patientId,
-    width: 100,
-    height: 100,
+    width: 150,
+    height: 150,
     colorDark: '#000000',
     colorLight: '#ffffff',
+    correctLevel: QRCode.CorrectLevel.H
   });
 
-  // Appointment summary
   const apptDate = new Date(appt);
   document.getElementById('appt-summary').innerHTML =
     `<b style="color:var(--text)">Patient ID:</b> ${patientId}<br>
@@ -846,110 +842,104 @@ function resetRegister() {
 }
 
 function downloadCard() {
-  if (!currentRegistered) return;
-
-  // Get QR image — QRCode.js renders a canvas or img
-  const qrCanvas = document.querySelector('#qr-output canvas');
-  const qrImg = document.querySelector('#qr-output img');
-  let qrDataUrl = null;
-  if (qrCanvas) qrDataUrl = qrCanvas.toDataURL('image/png');
-  else if (qrImg) qrDataUrl = qrImg.src;
-
-  const { jsPDF } = window.jspdf;
-  // A6 portrait — good clinic card size, fits on A4 when printed
-  const doc = new jsPDF({ unit: 'mm', format: 'a6', orientation: 'portrait' });
-
-  // Dark background
-  doc.setFillColor(13, 27, 42);
-  doc.rect(0, 0, 105, 148, 'F');
-
-  // Top green bar
-  doc.setFillColor(0, 200, 150);
-  doc.rect(0, 0, 105, 9, 'F');
-  doc.setTextColor(13, 27, 42);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'bold');
-  doc.text('SMARTCLINIC', 5, 6);
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.text('PATIENT CARD', 75, 6);
-
-  // Patient name
-  doc.setTextColor(232, 240, 247);
-  doc.setFontSize(15);
-  doc.setFont('helvetica', 'bold');
-  doc.text(currentRegistered.name, 5, 22);
-
-  // IDs
-  doc.setTextColor(122, 149, 168);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Patient ID : ' + currentRegistered.patientId, 5, 30);
-  doc.text('ID Number  : ' + currentRegistered.idNum, 5, 36);
-  if (currentRegistered.dob) {
-    doc.text('Date of Birth: ' + currentRegistered.dob, 5, 42);
+  if (!currentRegistered) {
+    alert('No patient data available');
+    return;
   }
 
-  // Divider
-  doc.setDrawColor(50, 70, 90);
-  doc.setLineWidth(0.3);
-  doc.line(5, 46, 100, 46);
+  setTimeout(() => {
+    const qrCanvas = document.querySelector('#qr-output canvas');
+    const qrImg = document.querySelector('#qr-output img');
+    let qrDataUrl = null;
+    if (qrCanvas) qrDataUrl = qrCanvas.toDataURL('image/png');
+    else if (qrImg) qrDataUrl = qrImg.src;
 
-  // QR code centred
-  if (qrDataUrl) {
-    doc.addImage(qrDataUrl, 'PNG', 27, 50, 51, 51);
-  } else {
+    if (typeof jspdf === 'undefined') {
+      console.error('jsPDF not loaded');
+      alert('PDF library not loaded. Please check your internet connection.');
+      return;
+    }
+
+    const { jsPDF } = jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: 'a6', orientation: 'portrait' });
+
+    doc.setFillColor(13, 27, 42);
+    doc.rect(0, 0, 105, 148, 'F');
+
+    doc.setFillColor(0, 200, 150);
+    doc.rect(0, 0, 105, 9, 'F');
+    doc.setTextColor(13, 27, 42);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('SMARTCLINIC', 5, 6);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.text('PATIENT CARD', 75, 6);
+
+    doc.setTextColor(232, 240, 247);
+    doc.setFontSize(15);
+    doc.setFont('helvetica', 'bold');
+    doc.text(currentRegistered.name, 5, 22);
+
     doc.setTextColor(122, 149, 168);
     doc.setFontSize(8);
-    doc.text('[QR Code here]', 52, 75, { align: 'center' });
-  }
+    doc.setFont('helvetica', 'normal');
+    doc.text('Patient ID : ' + currentRegistered.patientId, 5, 30);
+    doc.text('ID Number  : ' + currentRegistered.idNum, 5, 36);
+    if (currentRegistered.dob) {
+      doc.text('Date of Birth: ' + currentRegistered.dob, 5, 42);
+    }
 
-  // Instruction
-  doc.setTextColor(0, 200, 150);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'bold');
-  doc.text('SCAN AT KIOSK ON ARRIVAL', 52, 108, { align: 'center' });
+    doc.setDrawColor(50, 70, 90);
+    doc.setLineWidth(0.3);
+    doc.line(5, 46, 100, 46);
 
-  // Divider
-  doc.setDrawColor(50, 70, 90);
-  doc.line(5, 112, 100, 112);
+    if (qrDataUrl) {
+      doc.addImage(qrDataUrl, 'PNG', 27, 50, 51, 51);
+    } else {
+      doc.setTextColor(122, 149, 168);
+      doc.setFontSize(8);
+      doc.text('[QR Code here]', 52, 75, { align: 'center' });
+    }
 
-  // Footer instructions
-  doc.setTextColor(122, 149, 168);
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Bring this card to every appointment.', 52, 119, { align: 'center' });
-  doc.text('Lost your card? Log in to reprint anytime.', 52, 125, { align: 'center' });
+    doc.setTextColor(0, 200, 150);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text('SCAN AT KIOSK ON ARRIVAL', 52, 108, { align: 'center' });
 
-  // Appointment line
-  if (currentRegistered.appt) {
-    const apptDate = new Date(currentRegistered.appt);
-    doc.text('Next appt: ' + apptDate.toLocaleDateString('en-ZA') + ' ' +
-      apptDate.toLocaleTimeString('en-ZA', {hour:'2-digit',minute:'2-digit'}) +
-      ' — ' + currentRegistered.doctor, 52, 131, { align: 'center' });
-  }
+    doc.setDrawColor(50, 70, 90);
+    doc.line(5, 112, 100, 112);
 
-  // Issued
-  doc.setTextColor(50, 70, 90);
-  doc.setFontSize(6.5);
-  doc.text('Issued: ' + new Date().toLocaleDateString('en-ZA'), 52, 137, { align: 'center' });
+    doc.setTextColor(122, 149, 168);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'normal');
+    doc.text('Bring this card to every appointment.', 52, 119, { align: 'center' });
+    doc.text('Lost your card? Log in to reprint anytime.', 52, 125, { align: 'center' });
 
-  // Bottom green bar
-  doc.setFillColor(0, 200, 150);
-  doc.rect(0, 141, 105, 7, 'F');
-  doc.setTextColor(13, 27, 42);
-  doc.setFontSize(7);
-  doc.setFont('helvetica', 'bold');
-  doc.text('smartclinic.local  ·  Keep this card safe', 52, 145.5, { align: 'center' });
+    if (currentRegistered.appt) {
+      const apptDate = new Date(currentRegistered.appt);
+      doc.text('Next appt: ' + apptDate.toLocaleDateString('en-ZA') + ' ' +
+        apptDate.toLocaleTimeString('en-ZA', {hour:'2-digit',minute:'2-digit'}) +
+        ' — ' + currentRegistered.doctor, 52, 131, { align: 'center' });
+    }
 
-  doc.save('SmartClinic-Card-' + currentRegistered.patientId + '.pdf');
+    doc.setTextColor(50, 70, 90);
+    doc.setFontSize(6.5);
+    doc.text('Issued: ' + new Date().toLocaleDateString('en-ZA'), 52, 137, { align: 'center' });
+
+    doc.setFillColor(0, 200, 150);
+    doc.rect(0, 141, 105, 7, 'F');
+    doc.setTextColor(13, 27, 42);
+    doc.setFontSize(7);
+    doc.setFont('helvetica', 'bold');
+    doc.text('smartclinic.local  ·  Keep this card safe', 52, 145.5, { align: 'center' });
+
+    doc.save('SmartClinic-Card-' + currentRegistered.patientId + '.pdf');
+  }, 500);
 }
 
-// ═══════════════════════════════════════════════
 // STATUS HELPER
-// ═══════════════════════════════════════════════
 function setScanStatus(state, message) {
-  // state: 'idle' | 'scanning' | 'detected' | 'processing' | 'success' | 'error'
   const dot = document.getElementById('scan-dot');
   const text = document.getElementById('scan-status');
   const bar = document.getElementById('scan-status-bar');
@@ -957,37 +947,46 @@ function setScanStatus(state, message) {
   if (!dot || !text) return;
 
   dot.className = '';
-  frame.className = 'scan-frame';
-  bar.style.borderColor = '';
-  bar.style.background = '';
+  if (frame) frame.className = 'scan-frame';
+  if (bar) {
+    bar.style.borderColor = '';
+    bar.style.background = '';
+  }
 
   switch (state) {
     case 'scanning':
       dot.classList.add('dot-scanning');
-      bar.style.borderColor = 'rgba(0,200,150,0.2)';
+      if (bar) bar.style.borderColor = 'rgba(0,200,150,0.2)';
       break;
     case 'detected':
       dot.classList.add('dot-detected');
-      frame.classList.add('detected');
-      bar.style.borderColor = 'rgba(255,179,71,0.4)';
-      bar.style.background = 'rgba(255,179,71,0.06)';
+      if (frame) frame.classList.add('detected');
+      if (bar) {
+        bar.style.borderColor = 'rgba(255,179,71,0.4)';
+        bar.style.background = 'rgba(255,179,71,0.06)';
+      }
       break;
     case 'processing':
       dot.classList.add('dot-detected');
-      frame.classList.add('detected');
-      bar.style.borderColor = 'rgba(255,179,71,0.4)';
-      bar.style.background = 'rgba(255,179,71,0.06)';
+      if (bar) {
+        bar.style.borderColor = 'rgba(255,179,71,0.4)';
+        bar.style.background = 'rgba(255,179,71,0.06)';
+      }
       break;
     case 'success':
       dot.classList.add('dot-success');
-      frame.classList.add('success');
-      bar.style.borderColor = 'rgba(0,200,150,0.4)';
-      bar.style.background = 'rgba(0,200,150,0.06)';
+      if (frame) frame.classList.add('success');
+      if (bar) {
+        bar.style.borderColor = 'rgba(0,200,150,0.4)';
+        bar.style.background = 'rgba(0,200,150,0.06)';
+      }
       break;
     case 'error':
       dot.classList.add('dot-error');
-      bar.style.borderColor = 'rgba(255,90,90,0.3)';
-      bar.style.background = 'rgba(255,90,90,0.05)';
+      if (bar) {
+        bar.style.borderColor = 'rgba(255,90,90,0.3)';
+        bar.style.background = 'rgba(255,90,90,0.05)';
+      }
       break;
     default:
       break;
@@ -995,102 +994,192 @@ function setScanStatus(state, message) {
   text.textContent = message;
 }
 
-// ═══════════════════════════════════════════════
-// CAMERA / QR SCANNING — ZXing engine
-// ═══════════════════════════════════════════════
-let zxingControls = null;
+// CAMERA / QR SCANNING
 let qrLockout = false;
 
 async function startCamera() {
-  if (zxingControls) return;
-  setScanStatus('idle', 'Starting camera…');
-  try {
-    const codeReader = new ZXingBrowser.BrowserMultiFormatReader();
+  if (cameraStream) {
+    // Already have a stream, just make sure it's playing
     const video = document.getElementById('camera-video');
-
-    zxingControls = await codeReader.decodeFromConstraints(
-      { video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } },
-      video,
-      (result, err, controls) => {
-        if (qrLockout) return;
-        if (result) {
-          const text = result.getText();
-          if (text.startsWith('PAT-')) {
-            qrLockout = true;
-            setScanStatus('detected', '◉ QR code captured — reading…');
-            setTimeout(() => {
-              setScanStatus('processing', '⟳ Verifying patient record…');
-              setTimeout(() => {
-                controls.stop();
-                zxingControls = null;
-                processCheckin(text, 'QR_Scan');
-              }, 700);
-            }, 500);
-          }
-        }
-      }
-    );
-
-    setScanStatus('scanning', '● Scanning for QR code…');
-  } catch (e) {
-    setScanStatus('error', '⚠ Camera unavailable — use manual entry below');
+    if (video && video.srcObject) {
+      setScanStatus('scanning', '● Scanning for QR code…');
+      qrLockout = false;
+      return;
+    }
   }
+  
+  setScanStatus('idle', 'Starting camera…');
+  
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    setScanStatus('error', '⚠ Camera API not supported in this browser');
+    return;
+  }
+  
+  try {
+    // Try rear camera first with optimal settings for QR scanning
+    cameraStream = await navigator.mediaDevices.getUserMedia({
+      video: { 
+        facingMode: { exact: 'environment' },
+        width: { ideal: 1920 },
+        height: { ideal: 1080 }
+      }
+    });
+    setupVideoStream(cameraStream);
+  } catch (e) {
+    console.log('Rear camera failed, trying any camera:', e);
+    try {
+      // Fallback to any camera
+      cameraStream = await navigator.mediaDevices.getUserMedia({
+        video: true
+      });
+      setupVideoStream(cameraStream);
+    } catch (fallbackError) {
+      console.error('Camera error:', fallbackError);
+      setScanStatus('error', '⚠ Camera unavailable — use manual entry below');
+    }
+  }
+}
+
+function setupVideoStream(stream) {
+  const video = document.getElementById('camera-video');
+  video.srcObject = stream;
+  
+  video.onloadedmetadata = () => {
+    video.play().then(() => {
+      setScanStatus('scanning', '● Scanning for QR code…');
+      qrLockout = false;
+      if (scanInterval) clearInterval(scanInterval);
+      scanInterval = setInterval(scanFrame, 80); // Faster scanning
+    }).catch(err => {
+      console.error('Video play error:', err);
+      setScanStatus('error', '⚠ Video playback error');
+    });
+  };
+}
+
+function triggerCameraFocus() {
+  const video = document.getElementById('camera-video');
+  if (video && video.srcObject) {
+    const track = video.srcObject.getVideoTracks()[0];
+    if (track && track.getCapabilities && track.getCapabilities().focusMode) {
+      track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] })
+        .catch(e => console.log('Focus not supported'));
+    }
+  }
+  setScanStatus('scanning', '● Focusing... Hold QR code steady');
+  setTimeout(() => {
+    if (!qrLockout) setScanStatus('scanning', '● Scanning for QR code…');
+  }, 1000);
 }
 
 function stopCamera() {
-  if (zxingControls) {
-    try { zxingControls.stop(); } catch(e) {}
-    zxingControls = null;
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
   }
-  // Also kill any raw media tracks on the video element
+  if (scanInterval) { 
+    clearInterval(scanInterval); 
+    scanInterval = null; 
+  }
+  qrLockout = false;
+}
+
+function scanFrame() {
+  if (qrLockout) return;
+  
+  const now = Date.now();
+  if (now - lastScanTime < 100) return; // Throttle scanning
+  lastScanTime = now;
+  
   const video = document.getElementById('camera-video');
-  if (video && video.srcObject) {
-    video.srcObject.getTracks().forEach(t => t.stop());
-    video.srcObject = null;
+  const canvas = document.getElementById('camera-canvas');
+  if (!video || !video.videoWidth || video.readyState < 2) return;
+
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  
+  // Scan the entire frame for better detection
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  
+  try {
+    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: 'attemptBoth',
+      greyScaleWeights: { red: 0.3, green: 0.59, blue: 0.11 }
+    });
+
+    if (code && code.data && code.data.startsWith('PAT-')) {
+      console.log('QR detected:', code.data);
+      qrLockout = true;
+      setScanStatus('detected', '◉ QR code captured — reading…');
+      
+      // Haptic feedback if available
+      if (window.navigator && window.navigator.vibrate) {
+        window.navigator.vibrate(200);
+      }
+      
+      setTimeout(() => {
+        setScanStatus('processing', '⟳ Verifying patient record…');
+        setTimeout(() => {
+          stopCamera();
+          processCheckin(code.data, 'QR_Scan');
+        }, 300);
+      }, 300);
+    }
+  } catch (error) {
+    console.error('QR scanning error:', error);
   }
 }
 
-function scanFrame() {} // no-op — ZXing handles its own loop
-function refreshKioskList() {} // no-op
-
 function manualKioskCheckin() {
   const idInput = document.getElementById('manual-id-input').value.trim();
-  if (!idInput) { alert('Please enter your ID number.'); return; }
+  if (!idInput) { 
+    alert('Please enter your Patient ID or ID number.'); 
+    return; 
+  }
   const patient = patients.find(p => p.idNum === idInput || p.patientId === idInput);
-  if (!patient) { alert('Patient not found. Please see the receptionist.'); return; }
+  if (!patient) { 
+    alert('Patient not found. Please see the receptionist.'); 
+    return; 
+  }
   stopCamera();
   processCheckin(patient.patientId, 'Manual_ID_Entry');
 }
 
-// ═══════════════════════════════════════════════
-// CHECK-IN LOGIC — THE SENSOR TRIGGER
-// ═══════════════════════════════════════════════
+// CHECK-IN LOGIC
 function processCheckin(patientId, source) {
   const patient = patients.find(p => p.patientId === patientId);
   if (!patient) {
     setScanStatus('error', '✗ Patient not found — see receptionist');
-    setTimeout(() => { qrLockout = false; setScanStatus('scanning', '● Scanning for QR code…'); startCamera(); }, 2500);
+    setTimeout(() => { 
+      qrLockout = false; 
+      setScanStatus('scanning', '● Scanning for QR code…'); 
+      startCamera(); 
+    }, 2500);
     return;
   }
+  
   if (patient.checkedIn) {
     setScanStatus('error', '✗ Already checked in today');
-    setTimeout(() => { qrLockout = false; setScanStatus('scanning', '● Scanning for QR code…'); startCamera(); }, 2500);
+    setTimeout(() => { 
+      qrLockout = false; 
+      setScanStatus('scanning', '● Scanning for QR code…'); 
+      startCamera(); 
+    }, 2500);
     return;
   }
 
-  // Mark checked in
   patient.checkedIn = true;
   const queuePos = queueCounter++;
   const checkInTime = new Date();
   const waitMinutes = (queuePos - 1) * 12;
 
-  // Add to queue
   queue.push({
     queuePos, patient, checkInTime,
     waitMinutes, status: 'Waiting', source
   });
 
-  // Write sensor reading
   const reading = {
     sensorId: 'SR-' + Date.now().toString().slice(-5),
     sensorType: 'SmartCheckIn',
@@ -1104,12 +1193,12 @@ function processCheckin(patientId, source) {
   sensorLog.unshift(reading);
   updateSensorLog();
 
-  // Show success on kiosk
   setScanStatus('success', '✓ Check-in complete!');
   setTimeout(() => {
     document.getElementById('kiosk-scan-view').style.display = 'none';
     document.getElementById('kiosk-success-view').style.display = 'block';
   }, 400);
+  
   document.getElementById('kiosk-queue-num').textContent = queuePos;
   document.getElementById('kiosk-patient-name').textContent = patient.name;
   document.getElementById('kiosk-doctor').textContent = patient.doctor;
@@ -1123,13 +1212,13 @@ function resetKiosk() {
   document.getElementById('kiosk-success-view').style.display = 'none';
   document.getElementById('manual-id-input').value = '';
   qrLockout = false;
-  stopCamera();
+  if (cameraStream) {
+    stopCamera();
+  }
   startCamera();
 }
 
-// ═══════════════════════════════════════════════
 // RECEPTIONIST DASHBOARD
-// ═══════════════════════════════════════════════
 function refreshDashboard() {
   const waiting = queue.filter(q => q.status === 'Waiting');
   document.getElementById('stat-checkedin').textContent = queue.length;
@@ -1216,9 +1305,7 @@ function receptionistCheckin(patientId) {
       ✓ Patient checked in successfully. Queue updated.</div>`;
 }
 
-// ═══════════════════════════════════════════════
 // SENSOR LOG
-// ═══════════════════════════════════════════════
 function updateSensorLog() {
   const container = document.getElementById('sensor-log-entries');
   const empty = document.getElementById('sensor-log-empty');
