@@ -1,0 +1,1140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartClinic — Sensor 1 Demo</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=Space+Mono:wght@400;700&display=swap');
+
+  :root {
+    --green: #00C896;
+    --green-dark: #009e78;
+    --navy: #0D1B2A;
+    --navy-light: #162335;
+    --slate: #1E2D3D;
+    --text: #E8F0F7;
+    --text-dim: #7A95A8;
+    --border: rgba(255,255,255,0.07);
+    --card: rgba(255,255,255,0.04);
+    --danger: #FF5A5A;
+    --amber: #FFB347;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--navy);
+    color: var(--text);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* NAV */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 32px;
+    border-bottom: 1px solid var(--border);
+    background: var(--navy-light);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.1rem;
+    color: var(--green);
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--text-dim); }
+  .nav-tabs { display: flex; gap: 4px; }
+  .nav-tab {
+    padding: 8px 18px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .nav-tab.active {
+    background: var(--green);
+    color: var(--navy);
+    font-weight: 600;
+  }
+  .nav-tab:hover:not(.active) {
+    background: var(--border);
+    color: var(--text);
+  }
+
+  /* MAIN LAYOUT */
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 32px 24px;
+  }
+
+  /* SECTIONS */
+  .section { display: none; }
+  .section.active { display: block; }
+
+  /* CARDS */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 28px;
+  }
+
+  .card-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--green);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  /* FORM */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .form-group { display: flex; flex-direction: column; gap: 8px; }
+  .form-group.full { grid-column: 1 / -1; }
+  label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+  input, select {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 16px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  input:focus, select:focus {
+    border-color: var(--green);
+  }
+  input::placeholder { color: var(--text-dim); }
+
+  /* BUTTONS */
+  .btn {
+    padding: 13px 28px;
+    border-radius: 10px;
+    border: none;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-primary {
+    background: var(--green);
+    color: var(--navy);
+  }
+  .btn-primary:hover { background: var(--green-dark); transform: translateY(-1px); }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .btn-outline:hover { border-color: var(--green); color: var(--green); }
+  .btn-danger {
+    background: var(--danger);
+    color: white;
+  }
+
+  /* PATIENT CARD PREVIEW */
+  .clinic-card {
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+    border: 1px solid var(--green);
+    border-radius: 16px;
+    padding: 28px;
+    max-width: 380px;
+    position: relative;
+    overflow: hidden;
+  }
+  .clinic-card::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    background: rgba(0,200,150,0.08);
+  }
+  .clinic-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+  }
+  .clinic-card-logo {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.85rem;
+    color: var(--green);
+  }
+  .clinic-card-type {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    background: var(--border);
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+  .clinic-card-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .clinic-card-id {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-bottom: 20px;
+  }
+  .clinic-card-qr {
+    background: white;
+    padding: 10px;
+    border-radius: 10px;
+    display: inline-block;
+    margin-bottom: 16px;
+  }
+  .clinic-card-footer {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+  }
+
+  /* KIOSK */
+  .kiosk-screen {
+    background: var(--navy-light);
+    border: 2px solid var(--border);
+    border-radius: 20px;
+    padding: 40px 32px;
+    text-align: center;
+    max-width: 480px;
+    margin: 0 auto;
+  }
+  .kiosk-screen h2 {
+    font-family: 'Space Mono', monospace;
+    font-size: 1rem;
+    color: var(--green);
+    margin-bottom: 8px;
+  }
+  .kiosk-screen p {
+    color: var(--text-dim);
+    font-size: 0.875rem;
+    margin-bottom: 24px;
+  }
+
+  .camera-box {
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    position: relative;
+    width: 100%;
+    aspect-ratio: 4/3;
+    margin-bottom: 20px;
+  }
+  #camera-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  #camera-canvas { display: none; }
+  .scan-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .scan-frame {
+    width: 160px;
+    height: 160px;
+    border: 2px solid var(--green);
+    border-radius: 12px;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.4);
+    animation: pulse-border 1.5s ease-in-out infinite;
+  }
+  @keyframes pulse-border {
+    0%, 100% { border-color: var(--green); box-shadow: 0 0 0 9999px rgba(0,0,0,0.4), 0 0 20px rgba(0,200,150,0.3); }
+    50% { border-color: #00ffbc; box-shadow: 0 0 0 9999px rgba(0,0,0,0.4), 0 0 30px rgba(0,200,150,0.6); }
+  }
+  .scan-status {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+  }
+
+  /* SUCCESS SCREEN */
+  .success-screen {
+    text-align: center;
+    padding: 40px 20px;
+    animation: fadeInUp 0.5s ease;
+  }
+  @keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .success-icon {
+    width: 80px; height: 80px;
+    background: var(--green);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+    font-size: 2rem;
+  }
+  .queue-number {
+    font-family: 'Space Mono', monospace;
+    font-size: 4rem;
+    color: var(--green);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .queue-label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+    margin-bottom: 24px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  /* RECEPTIONIST DASHBOARD */
+  .dash-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+  .stat-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+  }
+  .stat-value {
+    font-family: 'Space Mono', monospace;
+    font-size: 2rem;
+    color: var(--green);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .stat-label {
+    font-size: 0.8rem;
+    color: var(--text-dim);
+  }
+
+  .queue-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .queue-table th {
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 0.75rem;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+  .queue-table td {
+    padding: 12px 14px;
+    font-size: 0.875rem;
+    border-bottom: 1px solid var(--border);
+  }
+  .queue-table tr:last-child td { border-bottom: none; }
+  .queue-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  .badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 600;
+  }
+  .badge-green { background: rgba(0,200,150,0.15); color: var(--green); }
+  .badge-amber { background: rgba(255,179,71,0.15); color: var(--amber); }
+  .badge-dim { background: var(--border); color: var(--text-dim); }
+  .badge-red { background: rgba(255,90,90,0.15); color: var(--danger); }
+
+  /* SENSOR LOG */
+  .log-entry {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    animation: fadeInUp 0.3s ease;
+  }
+  .log-entry:last-child { border-bottom: none; }
+  .log-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    flex-shrink: 0;
+  }
+  .log-time {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    white-space: nowrap;
+  }
+  .log-text { font-size: 0.85rem; flex: 1; }
+  .log-source {
+    font-size: 0.72rem;
+    color: var(--text-dim);
+    background: var(--border);
+    padding: 2px 8px;
+    border-radius: 10px;
+    white-space: nowrap;
+  }
+
+  /* TABS inside section */
+  .inner-tabs {
+    display: flex;
+    gap: 4px;
+    margin-bottom: 24px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 4px;
+    width: fit-content;
+  }
+  .inner-tab {
+    padding: 8px 20px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .inner-tab.active {
+    background: var(--slate);
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  .inner-section { display: none; }
+  .inner-section.active { display: block; }
+
+  /* MISC */
+  .page-title {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.4rem;
+    margin-bottom: 6px;
+  }
+  .page-sub {
+    color: var(--text-dim);
+    font-size: 0.875rem;
+    margin-bottom: 28px;
+  }
+  .divider { height: 1px; background: var(--border); margin: 24px 0; }
+  .flex { display: flex; gap: 12px; align-items: center; }
+  .flex-between { display: flex; justify-content: space-between; align-items: center; }
+  .mt-16 { margin-top: 16px; }
+  .mt-24 { margin-top: 24px; }
+  .text-green { color: var(--green); }
+  .text-dim { color: var(--text-dim); font-size: 0.85rem; }
+
+  .alert-box {
+    background: rgba(255,179,71,0.08);
+    border: 1px solid rgba(255,179,71,0.2);
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 0.875rem;
+    color: var(--amber);
+    margin-bottom: 16px;
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+  }
+
+  @media (max-width: 600px) {
+    .form-grid { grid-template-columns: 1fr; }
+    .dash-grid { grid-template-columns: 1fr 1fr; }
+    nav { padding: 14px 16px; }
+    .container { padding: 20px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">Smart<span>Clinic</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showSection('register')">Register</button>
+    <button class="nav-tab" onclick="showSection('kiosk')">Kiosk</button>
+    <button class="nav-tab" onclick="showSection('receptionist')">Receptionist</button>
+    <button class="nav-tab" onclick="showSection('sensorlog')">Sensor Log</button>
+  </div>
+</nav>
+
+<div class="container">
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SECTION 1: REGISTER                        -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="section active" id="section-register">
+    <div class="page-title">Patient Registration</div>
+    <div class="page-sub">Register once. Generate your permanent SmartClinic card.</div>
+
+    <div id="register-form-view">
+      <div class="card">
+        <div class="card-title">New Patient Details</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="reg-name" placeholder="e.g. Shangase SS">
+          </div>
+          <div class="form-group">
+            <label>ID Number</label>
+            <input type="text" id="reg-id" placeholder="e.g. 9801015800088">
+          </div>
+          <div class="form-group">
+            <label>Date of Birth</label>
+            <input type="date" id="reg-dob">
+          </div>
+          <div class="form-group">
+            <label>Contact Number</label>
+            <input type="text" id="reg-contact" placeholder="e.g. 0821234567">
+          </div>
+          <div class="form-group full">
+            <label>Appointment Date & Time</label>
+            <input type="datetime-local" id="reg-appt">
+          </div>
+          <div class="form-group full">
+            <label>Doctor</label>
+            <select id="reg-doctor">
+              <option value="">Select doctor</option>
+              <option value="Dr Gwala">Dr Gwala — General</option>
+              <option value="Dr Dlamini">Dr Dlamini — Paediatrics</option>
+              <option value="Dr Ntuli">Dr Ntuli — Chronic Care</option>
+            </select>
+          </div>
+        </div>
+        <div class="mt-24">
+          <button class="btn btn-primary" onclick="registerPatient()">✓ Register Patient</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="register-success-view" style="display:none;">
+      <div class="alert-box" style="background:rgba(0,200,150,0.08);border-color:rgba(0,200,150,0.2);color:var(--green);">
+        ✓ Registration successful. Download your clinic card below.
+      </div>
+      <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-start;">
+        <div>
+          <div class="clinic-card" id="clinic-card-preview">
+            <div class="clinic-card-header">
+              <div class="clinic-card-logo">SmartClinic</div>
+              <div class="clinic-card-type">PATIENT CARD</div>
+            </div>
+            <div class="clinic-card-name" id="card-name">—</div>
+            <div class="clinic-card-id" id="card-patientid">—</div>
+            <div class="clinic-card-qr">
+              <div id="qr-output"></div>
+            </div>
+            <div class="clinic-card-footer">
+              Scan at kiosk on arrival · Bring to every appointment<br>
+              <span id="card-issued">—</span>
+            </div>
+          </div>
+          <div class="flex mt-16" style="gap:10px;">
+            <button class="btn btn-primary" onclick="downloadCard()">↓ Download PDF Card</button>
+            <button class="btn btn-outline" onclick="resetRegister()">+ New Patient</button>
+          </div>
+        </div>
+        <div class="card" style="flex:1;min-width:220px;">
+          <div class="card-title">Appointment Booked</div>
+          <div id="appt-summary" style="font-size:0.875rem;line-height:1.8;color:var(--text-dim);"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SECTION 2: KIOSK                           -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="section" id="section-kiosk">
+    <div class="page-title">Check-In Kiosk</div>
+    <div class="page-sub">Patient self-service screen near clinic entrance.</div>
+
+    <div id="kiosk-scan-view">
+      <div class="kiosk-screen">
+        <h2>🏥 SmartClinic</h2>
+        <p>Hold your clinic card up to the camera to check in</p>
+        <div class="camera-box">
+          <video id="camera-video" autoplay playsinline muted></video>
+          <canvas id="camera-canvas"></canvas>
+          <div class="scan-overlay">
+            <div class="scan-frame"></div>
+          </div>
+        </div>
+        <div class="scan-status" id="scan-status">● Scanning for QR code...</div>
+        <div class="divider"></div>
+        <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:12px;">No card? Enter your ID number:</div>
+        <div class="flex" style="gap:8px;">
+          <input type="text" id="manual-id-input" placeholder="ID Number" style="flex:1;">
+          <button class="btn btn-outline" onclick="manualKioskCheckin()">Check In</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="kiosk-success-view" style="display:none;">
+      <div class="kiosk-screen">
+        <div class="success-screen">
+          <div class="success-icon">✓</div>
+          <div class="queue-number" id="kiosk-queue-num">—</div>
+          <div class="queue-label">Your Queue Number</div>
+          <div style="font-size:1rem;font-weight:600;margin-bottom:4px;" id="kiosk-patient-name">—</div>
+          <div style="font-size:0.85rem;color:var(--text-dim);margin-bottom:4px;" id="kiosk-doctor">—</div>
+          <div style="font-size:0.85rem;color:var(--text-dim);margin-bottom:28px;" id="kiosk-wait">—</div>
+          <div style="font-size:0.875rem;color:var(--text-dim);margin-bottom:24px;">Please take a seat. Your number will be called.</div>
+          <button class="btn btn-outline" onclick="resetKiosk()">← Back to Check-In</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SECTION 3: RECEPTIONIST                    -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="section" id="section-receptionist">
+    <div class="page-title">Receptionist Dashboard</div>
+    <div class="page-sub">Live queue management and manual override panel.</div>
+
+    <div class="dash-grid">
+      <div class="stat-card">
+        <div class="stat-value text-green" id="stat-checkedin">0</div>
+        <div class="stat-label">Checked In Today</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-waiting">0</div>
+        <div class="stat-label">Currently Waiting</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-avgwait">0 min</div>
+        <div class="stat-label">Avg Wait Time</div>
+      </div>
+    </div>
+
+    <div class="inner-tabs">
+      <button class="inner-tab active" onclick="showInner('queue-view', this)">Live Queue</button>
+      <button class="inner-tab" onclick="showInner('manual-view', this)">Manual Check-In</button>
+    </div>
+
+    <div class="inner-section active" id="queue-view">
+      <div class="card">
+        <div class="flex-between" style="margin-bottom:16px;">
+          <div class="card-title" style="margin-bottom:0;">Current Queue</div>
+          <button class="btn btn-outline" style="padding:6px 14px;font-size:0.8rem;" onclick="refreshDashboard()">↻ Refresh</button>
+        </div>
+        <div id="queue-empty" style="color:var(--text-dim);font-size:0.875rem;padding:20px 0;text-align:center;">No patients checked in yet. Queue is empty.</div>
+        <table class="queue-table" id="queue-table" style="display:none;">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Patient</th>
+              <th>Doctor</th>
+              <th>Check-In</th>
+              <th>Wait</th>
+              <th>Source</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="queue-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="inner-section" id="manual-view">
+      <div class="card">
+        <div class="card-title">Manual Check-In Override</div>
+        <div class="alert-box">⚠ Use this for patients who cannot use the kiosk — elderly patients, lost cards, or walk-ins.</div>
+        <div class="form-grid">
+          <div class="form-group">
+            <label>Search by ID Number</label>
+            <input type="text" id="manual-search-id" placeholder="Enter patient ID">
+          </div>
+          <div class="form-group">
+            <label>OR Search by Full Name</label>
+            <input type="text" id="manual-search-name" placeholder="Enter full name">
+          </div>
+        </div>
+        <div class="mt-16">
+          <button class="btn btn-primary" onclick="manualSearch()">Search Patient</button>
+        </div>
+        <div id="manual-result" style="margin-top:20px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════════════════════ -->
+  <!-- SECTION 4: SENSOR LOG                      -->
+  <!-- ═══════════════════════════════════════════ -->
+  <div class="section" id="section-sensorlog">
+    <div class="page-title">SENSOR_READINGS Table</div>
+    <div class="page-sub">Every check-in event logged automatically. This is your Sensor 1 data.</div>
+    <div class="card">
+      <div class="flex-between" style="margin-bottom:16px;">
+        <div class="card-title" style="margin-bottom:0;">Live Sensor Log</div>
+        <span class="badge badge-green">● Live</span>
+      </div>
+      <div id="sensor-log-empty" style="color:var(--text-dim);font-size:0.875rem;padding:20px 0;text-align:center;">No sensor readings yet. Check in a patient to see data appear here.</div>
+      <div id="sensor-log-entries"></div>
+    </div>
+  </div>
+
+</div><!-- /container -->
+
+<script>
+// ═══════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════
+let patients = [];
+let queue = [];
+let sensorLog = [];
+let queueCounter = 1;
+let cameraStream = null;
+let scanInterval = null;
+let currentRegistered = null;
+
+// ═══════════════════════════════════════════════
+// NAVIGATION
+// ═══════════════════════════════════════════════
+function showSection(name) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('section-' + name).classList.add('active');
+  event.target.classList.add('active');
+
+  if (name === 'kiosk') startCamera();
+  else stopCamera();
+
+  if (name === 'receptionist') refreshDashboard();
+}
+
+function showInner(id, btn) {
+  btn.closest('.section').querySelectorAll('.inner-section').forEach(s => s.classList.remove('active'));
+  btn.closest('.section').querySelectorAll('.inner-tab').forEach(t => t.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ═══════════════════════════════════════════════
+// REGISTRATION
+// ═══════════════════════════════════════════════
+function registerPatient() {
+  const name = document.getElementById('reg-name').value.trim();
+  const idNum = document.getElementById('reg-id').value.trim();
+  const dob = document.getElementById('reg-dob').value;
+  const contact = document.getElementById('reg-contact').value.trim();
+  const appt = document.getElementById('reg-appt').value;
+  const doctor = document.getElementById('reg-doctor').value;
+
+  if (!name || !idNum || !appt || !doctor) {
+    alert('Please fill in Name, ID Number, Appointment and Doctor.');
+    return;
+  }
+
+  const patientId = 'PAT-' + Date.now().toString().slice(-6);
+  const appointmentId = 'APT-' + Date.now().toString().slice(-5);
+
+  const patient = { patientId, name, idNum, dob, contact, appt, doctor, appointmentId, checkedIn: false };
+  patients.push(patient);
+  currentRegistered = patient;
+
+  // Show success
+  document.getElementById('register-form-view').style.display = 'none';
+  document.getElementById('register-success-view').style.display = 'block';
+
+  // Fill card
+  document.getElementById('card-name').textContent = name;
+  document.getElementById('card-patientid').textContent = patientId + ' · ' + idNum;
+  document.getElementById('card-issued').textContent = 'Issued: ' + new Date().toLocaleDateString('en-ZA');
+
+  // Generate QR
+  document.getElementById('qr-output').innerHTML = '';
+  new QRCode(document.getElementById('qr-output'), {
+    text: patientId,
+    width: 100,
+    height: 100,
+    colorDark: '#000000',
+    colorLight: '#ffffff',
+  });
+
+  // Appointment summary
+  const apptDate = new Date(appt);
+  document.getElementById('appt-summary').innerHTML =
+    `<b style="color:var(--text)">Patient ID:</b> ${patientId}<br>
+     <b style="color:var(--text)">Appointment ID:</b> ${appointmentId}<br>
+     <b style="color:var(--text)">Date:</b> ${apptDate.toLocaleDateString('en-ZA')}<br>
+     <b style="color:var(--text)">Time:</b> ${apptDate.toLocaleTimeString('en-ZA', {hour:'2-digit',minute:'2-digit'})}<br>
+     <b style="color:var(--text)">Doctor:</b> ${doctor}<br>
+     <b style="color:var(--text)">Status:</b> <span class="badge badge-dim">Booked</span>`;
+}
+
+function resetRegister() {
+  document.getElementById('register-form-view').style.display = 'block';
+  document.getElementById('register-success-view').style.display = 'none';
+  document.getElementById('reg-name').value = '';
+  document.getElementById('reg-id').value = '';
+  document.getElementById('reg-dob').value = '';
+  document.getElementById('reg-contact').value = '';
+  document.getElementById('reg-appt').value = '';
+  document.getElementById('reg-doctor').value = '';
+}
+
+function downloadCard() {
+  if (!currentRegistered) return;
+
+  // Get QR image — QRCode.js renders a canvas or img
+  const qrCanvas = document.querySelector('#qr-output canvas');
+  const qrImg = document.querySelector('#qr-output img');
+  let qrDataUrl = null;
+  if (qrCanvas) qrDataUrl = qrCanvas.toDataURL('image/png');
+  else if (qrImg) qrDataUrl = qrImg.src;
+
+  const { jsPDF } = window.jspdf;
+  // A6 portrait — good clinic card size, fits on A4 when printed
+  const doc = new jsPDF({ unit: 'mm', format: 'a6', orientation: 'portrait' });
+
+  // Dark background
+  doc.setFillColor(13, 27, 42);
+  doc.rect(0, 0, 105, 148, 'F');
+
+  // Top green bar
+  doc.setFillColor(0, 200, 150);
+  doc.rect(0, 0, 105, 9, 'F');
+  doc.setTextColor(13, 27, 42);
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  doc.text('SMARTCLINIC', 5, 6);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.text('PATIENT CARD', 75, 6);
+
+  // Patient name
+  doc.setTextColor(232, 240, 247);
+  doc.setFontSize(15);
+  doc.setFont('helvetica', 'bold');
+  doc.text(currentRegistered.name, 5, 22);
+
+  // IDs
+  doc.setTextColor(122, 149, 168);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Patient ID : ' + currentRegistered.patientId, 5, 30);
+  doc.text('ID Number  : ' + currentRegistered.idNum, 5, 36);
+  if (currentRegistered.dob) {
+    doc.text('Date of Birth: ' + currentRegistered.dob, 5, 42);
+  }
+
+  // Divider
+  doc.setDrawColor(50, 70, 90);
+  doc.setLineWidth(0.3);
+  doc.line(5, 46, 100, 46);
+
+  // QR code centred
+  if (qrDataUrl) {
+    doc.addImage(qrDataUrl, 'PNG', 27, 50, 51, 51);
+  } else {
+    doc.setTextColor(122, 149, 168);
+    doc.setFontSize(8);
+    doc.text('[QR Code here]', 52, 75, { align: 'center' });
+  }
+
+  // Instruction
+  doc.setTextColor(0, 200, 150);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'bold');
+  doc.text('SCAN AT KIOSK ON ARRIVAL', 52, 108, { align: 'center' });
+
+  // Divider
+  doc.setDrawColor(50, 70, 90);
+  doc.line(5, 112, 100, 112);
+
+  // Footer instructions
+  doc.setTextColor(122, 149, 168);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Bring this card to every appointment.', 52, 119, { align: 'center' });
+  doc.text('Lost your card? Log in to reprint anytime.', 52, 125, { align: 'center' });
+
+  // Appointment line
+  if (currentRegistered.appt) {
+    const apptDate = new Date(currentRegistered.appt);
+    doc.text('Next appt: ' + apptDate.toLocaleDateString('en-ZA') + ' ' +
+      apptDate.toLocaleTimeString('en-ZA', {hour:'2-digit',minute:'2-digit'}) +
+      ' — ' + currentRegistered.doctor, 52, 131, { align: 'center' });
+  }
+
+  // Issued
+  doc.setTextColor(50, 70, 90);
+  doc.setFontSize(6.5);
+  doc.text('Issued: ' + new Date().toLocaleDateString('en-ZA'), 52, 137, { align: 'center' });
+
+  // Bottom green bar
+  doc.setFillColor(0, 200, 150);
+  doc.rect(0, 141, 105, 7, 'F');
+  doc.setTextColor(13, 27, 42);
+  doc.setFontSize(7);
+  doc.setFont('helvetica', 'bold');
+  doc.text('smartclinic.local  ·  Keep this card safe', 52, 145.5, { align: 'center' });
+
+  doc.save('SmartClinic-Card-' + currentRegistered.patientId + '.pdf');
+}
+
+// ═══════════════════════════════════════════════
+// CAMERA / QR SCANNING
+// ═══════════════════════════════════════════════
+async function startCamera() {
+  if (cameraStream) return;
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    const video = document.getElementById('camera-video');
+    video.srcObject = cameraStream;
+    video.play();
+    scanInterval = setInterval(scanFrame, 300);
+    document.getElementById('scan-status').textContent = '● Scanning for QR code...';
+  } catch (e) {
+    document.getElementById('scan-status').textContent = 'Camera unavailable — use manual ID entry below';
+  }
+}
+
+function stopCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+  if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
+}
+
+function scanFrame() {
+  const video = document.getElementById('camera-video');
+  const canvas = document.getElementById('camera-canvas');
+  if (!video.videoWidth) return;
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const code = jsQR(imageData.data, imageData.width, imageData.height);
+  if (code && code.data.startsWith('PAT-')) {
+    stopCamera();
+    processCheckin(code.data, 'QR_Scan');
+  }
+}
+
+function manualKioskCheckin() {
+  const idInput = document.getElementById('manual-id-input').value.trim();
+  if (!idInput) { alert('Please enter your ID number.'); return; }
+  const patient = patients.find(p => p.idNum === idInput || p.patientId === idInput);
+  if (!patient) { alert('Patient not found. Please see the receptionist.'); return; }
+  stopCamera();
+  processCheckin(patient.patientId, 'Manual_ID_Entry');
+}
+
+// ═══════════════════════════════════════════════
+// CHECK-IN LOGIC — THE SENSOR TRIGGER
+// ═══════════════════════════════════════════════
+function processCheckin(patientId, source) {
+  const patient = patients.find(p => p.patientId === patientId);
+  if (!patient) {
+    document.getElementById('scan-status').textContent = '✗ Patient not found. See receptionist.';
+    startCamera();
+    return;
+  }
+  if (patient.checkedIn) {
+    document.getElementById('scan-status').textContent = '✗ Already checked in.';
+    setTimeout(() => startCamera(), 2000);
+    return;
+  }
+
+  // Mark checked in
+  patient.checkedIn = true;
+  const queuePos = queueCounter++;
+  const checkInTime = new Date();
+  const waitMinutes = (queuePos - 1) * 12;
+
+  // Add to queue
+  queue.push({
+    queuePos, patient, checkInTime,
+    waitMinutes, status: 'Waiting', source
+  });
+
+  // Write sensor reading
+  const reading = {
+    sensorId: 'SR-' + Date.now().toString().slice(-5),
+    sensorType: 'SmartCheckIn',
+    source,
+    patientId,
+    patientName: patient.name,
+    queuePos,
+    timestamp: checkInTime,
+    occupancyLevel: queue.filter(q => q.status === 'Waiting').length
+  };
+  sensorLog.unshift(reading);
+  updateSensorLog();
+
+  // Show success on kiosk
+  document.getElementById('kiosk-scan-view').style.display = 'none';
+  document.getElementById('kiosk-success-view').style.display = 'block';
+  document.getElementById('kiosk-queue-num').textContent = queuePos;
+  document.getElementById('kiosk-patient-name').textContent = patient.name;
+  document.getElementById('kiosk-doctor').textContent = patient.doctor;
+  document.getElementById('kiosk-wait').textContent = waitMinutes === 0
+    ? 'You are next — please proceed'
+    : 'Estimated wait: ' + waitMinutes + ' minutes';
+}
+
+function resetKiosk() {
+  document.getElementById('kiosk-scan-view').style.display = 'block';
+  document.getElementById('kiosk-success-view').style.display = 'none';
+  document.getElementById('manual-id-input').value = '';
+  startCamera();
+}
+
+// ═══════════════════════════════════════════════
+// RECEPTIONIST DASHBOARD
+// ═══════════════════════════════════════════════
+function refreshDashboard() {
+  const waiting = queue.filter(q => q.status === 'Waiting');
+  document.getElementById('stat-checkedin').textContent = queue.length;
+  document.getElementById('stat-waiting').textContent = waiting.length;
+  const avg = waiting.length > 0
+    ? Math.round(waiting.reduce((s, q) => s + q.waitMinutes, 0) / waiting.length)
+    : 0;
+  document.getElementById('stat-avgwait').textContent = avg + ' min';
+
+  const tbody = document.getElementById('queue-tbody');
+  tbody.innerHTML = '';
+
+  if (queue.length === 0) {
+    document.getElementById('queue-empty').style.display = 'block';
+    document.getElementById('queue-table').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('queue-empty').style.display = 'none';
+  document.getElementById('queue-table').style.display = 'table';
+
+  queue.forEach(entry => {
+    const tr = document.createElement('tr');
+    const timeStr = entry.checkInTime.toLocaleTimeString('en-ZA', {hour:'2-digit',minute:'2-digit'});
+    const sourceBadge = entry.source === 'QR_Scan'
+      ? '<span class="badge badge-green">QR Scan</span>'
+      : entry.source === 'Manual_ID_Entry'
+      ? '<span class="badge badge-amber">ID Entry</span>'
+      : '<span class="badge badge-dim">Manual</span>';
+    const statusBadge = entry.status === 'Waiting'
+      ? '<span class="badge badge-green">Waiting</span>'
+      : '<span class="badge badge-dim">Done</span>';
+
+    tr.innerHTML = `
+      <td><b style="color:var(--green);font-family:'Space Mono',monospace">${entry.queuePos}</b></td>
+      <td>${entry.patient.name}</td>
+      <td>${entry.patient.doctor}</td>
+      <td style="font-family:'Space Mono',monospace;font-size:0.8rem;">${timeStr}</td>
+      <td>${entry.waitMinutes === 0 ? '<span class="text-green">Next</span>' : entry.waitMinutes + ' min'}</td>
+      <td>${sourceBadge}</td>
+      <td>${statusBadge}</td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+function manualSearch() {
+  const idInput = document.getElementById('manual-search-id').value.trim();
+  const nameInput = document.getElementById('manual-search-name').value.trim().toLowerCase();
+  const result = document.getElementById('manual-result');
+
+  const found = patients.find(p =>
+    (!idInput || p.idNum === idInput || p.patientId === idInput) &&
+    (!nameInput || p.name.toLowerCase().includes(nameInput))
+  );
+
+  if (!found) {
+    result.innerHTML = '<div class="alert-box">Patient not found. Check ID number or name and try again.</div>';
+    return;
+  }
+
+  if (found.checkedIn) {
+    result.innerHTML = `<div class="alert-box" style="color:var(--green);background:rgba(0,200,150,0.08);border-color:rgba(0,200,150,0.2);">
+      ✓ ${found.name} is already checked in.</div>`;
+    return;
+  }
+
+  result.innerHTML = `
+    <div class="card" style="margin-top:0;">
+      <div style="font-size:0.875rem;line-height:2;margin-bottom:16px;">
+        <b>Name:</b> ${found.name}<br>
+        <b>Patient ID:</b> ${found.patientId}<br>
+        <b>Doctor:</b> ${found.doctor}<br>
+        <b>Appointment:</b> ${new Date(found.appt).toLocaleTimeString('en-ZA',{hour:'2-digit',minute:'2-digit'})}
+      </div>
+      <button class="btn btn-primary" onclick="receptionistCheckin('${found.patientId}')">✓ Check In This Patient</button>
+    </div>`;
+}
+
+function receptionistCheckin(patientId) {
+  processCheckin(patientId, 'Receptionist_Manual');
+  refreshDashboard();
+  document.getElementById('manual-result').innerHTML =
+    `<div class="alert-box" style="color:var(--green);background:rgba(0,200,150,0.08);border-color:rgba(0,200,150,0.2);">
+      ✓ Patient checked in successfully. Queue updated.</div>`;
+}
+
+// ═══════════════════════════════════════════════
+// SENSOR LOG
+// ═══════════════════════════════════════════════
+function updateSensorLog() {
+  const container = document.getElementById('sensor-log-entries');
+  const empty = document.getElementById('sensor-log-empty');
+
+  if (sensorLog.length === 0) {
+    empty.style.display = 'block';
+    container.innerHTML = '';
+    return;
+  }
+
+  empty.style.display = 'none';
+  container.innerHTML = sensorLog.map(r => `
+    <div class="log-entry">
+      <div class="log-dot"></div>
+      <div class="log-time">${r.timestamp.toLocaleTimeString('en-ZA')}</div>
+      <div class="log-text">
+        <b>${r.sensorId}</b> · ${r.patientName} · Queue #${r.queuePos} · Occupancy: ${r.occupancyLevel}
+      </div>
+      <div class="log-source">${r.source}</div>
+    </div>`).join('');
+}
+</script>
+</body>
+</html>
