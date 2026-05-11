@@ -162,6 +162,12 @@
     background: var(--danger);
     color: white;
   }
+  .btn-capture {
+    background: var(--amber);
+    color: var(--navy);
+    font-weight: bold;
+  }
+  .btn-capture:hover { background: #ffa01e; transform: translateY(-1px); }
 
   /* PATIENT CARD PREVIEW */
   .clinic-card {
@@ -268,6 +274,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    pointer-events: none;
   }
   .scan-frame {
     width: 200px;
@@ -306,6 +313,12 @@
     font-size: 0.75rem;
     color: var(--text-dim);
     margin-bottom: 16px;
+  }
+
+  .button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
   }
 
   /* SUCCESS SCREEN */
@@ -502,6 +515,7 @@
     nav { padding: 14px 16px; }
     .container { padding: 20px 16px; }
     .scan-frame { width: 160px; height: 160px; }
+    .button-group { flex-direction: column; }
   }
 </style>
 </head>
@@ -626,6 +640,15 @@
           <span id="scan-status">Starting camera…</span>
         </div>
 
+        <div class="button-group">
+          <button class="btn btn-capture" onclick="captureAndAnalyzeQR()" style="flex:1;">
+            📷 Capture & Analyze QR
+          </button>
+          <button class="btn btn-outline" onclick="toggleAutoScan()" id="autoScanBtn" style="flex:1;">
+            ⏸️ Pause Auto-Scan
+          </button>
+        </div>
+
         <div class="divider"></div>
         <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:12px;">No card? Enter your Patient ID or ID number:</div>
         <div class="flex" style="gap:8px;">
@@ -747,8 +770,7 @@ let queueCounter = 1;
 let cameraStream = null;
 let scanInterval = null;
 let currentRegistered = null;
-let lastScanTime = 0;
-const SCAN_COOLDOWN = 2000; // 2 seconds cooldown between scans
+let autoScanEnabled = true;
 
 // Check if libraries are loaded
 console.log('Libraries loaded:', {
@@ -999,7 +1021,6 @@ let qrLockout = false;
 
 async function startCamera() {
   if (cameraStream) {
-    // Already have a stream, just make sure it's playing
     const video = document.getElementById('camera-video');
     if (video && video.srcObject) {
       setScanStatus('scanning', '● Scanning for QR code…');
@@ -1016,7 +1037,6 @@ async function startCamera() {
   }
   
   try {
-    // Try rear camera first with optimal settings for QR scanning
     cameraStream = await navigator.mediaDevices.getUserMedia({
       video: { 
         facingMode: { exact: 'environment' },
@@ -1028,7 +1048,6 @@ async function startCamera() {
   } catch (e) {
     console.log('Rear camera failed, trying any camera:', e);
     try {
-      // Fallback to any camera
       cameraStream = await navigator.mediaDevices.getUserMedia({
         video: true
       });
@@ -1049,12 +1068,97 @@ function setupVideoStream(stream) {
       setScanStatus('scanning', '● Scanning for QR code…');
       qrLockout = false;
       if (scanInterval) clearInterval(scanInterval);
-      scanInterval = setInterval(scanFrame, 80); // Faster scanning
+      if (autoScanEnabled) {
+        scanInterval = setInterval(scanFrame, 80);
+      }
     }).catch(err => {
       console.error('Video play error:', err);
       setScanStatus('error', '⚠ Video playback error');
     });
   };
+}
+
+function toggleAutoScan() {
+  autoScanEnabled = !autoScanEnabled;
+  const btn = document.getElementById('autoScanBtn');
+  
+  if (autoScanEnabled) {
+    btn.innerHTML = '⏸️ Pause Auto-Scan';
+    if (cameraStream) {
+      scanInterval = setInterval(scanFrame, 80);
+      setScanStatus('scanning', '● Auto-scan enabled - scanning for QR code…');
+    }
+  } else {
+    btn.innerHTML = '▶️ Start Auto-Scan';
+    if (scanInterval) {
+      clearInterval(scanInterval);
+      scanInterval = null;
+    }
+    setScanStatus('idle', '⏸️ Auto-scan paused - use Capture button');
+  }
+}
+
+function captureAndAnalyzeQR() {
+  if (!cameraStream) {
+    setScanStatus('error', '⚠ Camera not available');
+    return;
+  }
+  
+  setScanStatus('processing', '📸 Capturing and analyzing QR code...');
+  
+  // Capture current frame
+  const video = document.getElementById('camera-video');
+  const canvas = document.getElementById('camera-canvas');
+  
+  if (!video || !video.videoWidth) {
+    setScanStatus('error', '⚠ Cannot capture - camera not ready');
+    return;
+  }
+  
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  
+  // Show feedback that analysis started
+  const startTime = performance.now();
+  
+  try {
+    const code = jsQR(imageData.data, imageData.width, imageData.height, {
+      inversionAttempts: 'attemptBoth',
+      greyScaleWeights: { red: 0.3, green: 0.59, blue: 0.11 }
+    });
+    
+    const analysisTime = Math.round(performance.now() - startTime);
+    console.log(`QR analysis completed in ${analysisTime}ms`);
+    
+    if (code && code.data && code.data.startsWith('PAT-')) {
+      setScanStatus('detected', `✓ QR detected in ${analysisTime}ms — processing...`);
+      
+      if (window.navigator && window.navigator.vibrate) {
+        window.navigator.vibrate(200);
+      }
+      
+      setTimeout(() => {
+        stopCamera();
+        processCheckin(code.data, 'Manual_Capture');
+      }, 300);
+    } else {
+      setScanStatus('error', `❌ No valid QR code found (analysis: ${analysisTime}ms). Center the QR code and try again.`);
+      setTimeout(() => {
+        if (autoScanEnabled && cameraStream) {
+          setScanStatus('scanning', '● Scanning for QR code…');
+        } else if (!autoScanEnabled) {
+          setScanStatus('idle', 'Click Capture button to scan QR code');
+        }
+      }, 2000);
+    }
+  } catch (error) {
+    console.error('QR analysis error:', error);
+    setScanStatus('error', '⚠ Error analyzing QR code');
+  }
 }
 
 function triggerCameraFocus() {
@@ -1068,7 +1172,7 @@ function triggerCameraFocus() {
   }
   setScanStatus('scanning', '● Focusing... Hold QR code steady');
   setTimeout(() => {
-    if (!qrLockout) setScanStatus('scanning', '● Scanning for QR code…');
+    if (!qrLockout && autoScanEnabled) setScanStatus('scanning', '● Scanning for QR code…');
   }, 1000);
 }
 
@@ -1085,11 +1189,7 @@ function stopCamera() {
 }
 
 function scanFrame() {
-  if (qrLockout) return;
-  
-  const now = Date.now();
-  if (now - lastScanTime < 100) return; // Throttle scanning
-  lastScanTime = now;
+  if (qrLockout || !autoScanEnabled) return;
   
   const video = document.getElementById('camera-video');
   const canvas = document.getElementById('camera-canvas');
@@ -1100,7 +1200,6 @@ function scanFrame() {
   const ctx = canvas.getContext('2d');
   ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
   
-  // Scan the entire frame for better detection
   const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
   
   try {
@@ -1110,11 +1209,10 @@ function scanFrame() {
     });
 
     if (code && code.data && code.data.startsWith('PAT-')) {
-      console.log('QR detected:', code.data);
+      console.log('Auto-scan detected QR:', code.data);
       qrLockout = true;
       setScanStatus('detected', '◉ QR code captured — reading…');
       
-      // Haptic feedback if available
       if (window.navigator && window.navigator.vibrate) {
         window.navigator.vibrate(200);
       }
@@ -1123,7 +1221,7 @@ function scanFrame() {
         setScanStatus('processing', '⟳ Verifying patient record…');
         setTimeout(() => {
           stopCamera();
-          processCheckin(code.data, 'QR_Scan');
+          processCheckin(code.data, 'Auto_Scan');
         }, 300);
       }, 300);
     }
@@ -1154,8 +1252,12 @@ function processCheckin(patientId, source) {
     setScanStatus('error', '✗ Patient not found — see receptionist');
     setTimeout(() => { 
       qrLockout = false; 
-      setScanStatus('scanning', '● Scanning for QR code…'); 
-      startCamera(); 
+      if (autoScanEnabled) {
+        setScanStatus('scanning', '● Scanning for QR code…'); 
+        startCamera();
+      } else {
+        setScanStatus('idle', 'Click Capture button to scan QR code');
+      }
     }, 2500);
     return;
   }
@@ -1164,8 +1266,12 @@ function processCheckin(patientId, source) {
     setScanStatus('error', '✗ Already checked in today');
     setTimeout(() => { 
       qrLockout = false; 
-      setScanStatus('scanning', '● Scanning for QR code…'); 
-      startCamera(); 
+      if (autoScanEnabled) {
+        setScanStatus('scanning', '● Scanning for QR code…'); 
+        startCamera();
+      } else {
+        setScanStatus('idle', 'Click Capture button to scan QR code');
+      }
     }, 2500);
     return;
   }
@@ -1212,6 +1318,9 @@ function resetKiosk() {
   document.getElementById('kiosk-success-view').style.display = 'none';
   document.getElementById('manual-id-input').value = '';
   qrLockout = false;
+  autoScanEnabled = true;
+  const btn = document.getElementById('autoScanBtn');
+  if (btn) btn.innerHTML = '⏸️ Pause Auto-Scan';
   if (cameraStream) {
     stopCamera();
   }
@@ -1243,8 +1352,10 @@ function refreshDashboard() {
   queue.forEach(entry => {
     const tr = document.createElement('tr');
     const timeStr = entry.checkInTime.toLocaleTimeString('en-ZA', {hour:'2-digit',minute:'2-digit'});
-    const sourceBadge = entry.source === 'QR_Scan'
-      ? '<span class="badge badge-green">QR Scan</span>'
+    const sourceBadge = entry.source === 'Auto_Scan'
+      ? '<span class="badge badge-green">Auto Scan</span>'
+      : entry.source === 'Manual_Capture'
+      ? '<span class="badge badge-amber">Manual Capture</span>'
       : entry.source === 'Manual_ID_Entry'
       ? '<span class="badge badge-amber">ID Entry</span>'
       : '<span class="badge badge-dim">Manual</span>';
