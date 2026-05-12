@@ -3,10 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>SmartClinic — Working QR Scanner</title>
-<!-- Use a RELIABLE CDN for QR Code generation -->
+<title>SmartClinic — Working QR Scanner with Patient List</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-<!-- FIXED: Replaced broken Cloudflare jsQR with a working jsDelivr version -->
 <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
@@ -77,7 +75,7 @@
   }
 
   .container {
-    max-width: 1100px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 32px 24px;
   }
@@ -159,6 +157,10 @@
     font-weight: bold;
   }
   .btn-capture:hover { background: #ffa01e; transform: translateY(-1px); }
+  .btn-danger {
+    background: var(--danger);
+    color: white;
+  }
 
   .clinic-card {
     background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
@@ -183,7 +185,7 @@
     border-radius: 20px;
     padding: 40px 32px;
     text-align: center;
-    max-width: 480px;
+    max-width: 500px;
     margin: 0 auto;
   }
   .camera-box {
@@ -291,6 +293,7 @@
   }
   .badge-green { background: rgba(0,200,150,0.15); color: var(--green); }
   .badge-amber { background: rgba(255,179,71,0.15); color: var(--amber); }
+  .badge-dim { background: var(--border); color: var(--text-dim); }
   .log-entry {
     display: flex;
     align-items: center;
@@ -300,8 +303,11 @@
   }
   .flex { display: flex; gap: 12px; align-items: center; }
   .flex-between { display: flex; justify-content: space-between; align-items: center; }
+  .flex-wrap { flex-wrap: wrap; }
   .mt-24 { margin-top: 24px; }
+  .mb-16 { margin-bottom: 16px; }
   .text-green { color: var(--green); }
+  .text-center { text-align: center; }
   .alert-box {
     background: rgba(255,179,71,0.08);
     border: 1px solid rgba(255,179,71,0.2);
@@ -311,6 +317,21 @@
     color: var(--amber);
     margin-bottom: 16px;
   }
+  .patient-list {
+    background: var(--card);
+    border-radius: 12px;
+    padding: 16px;
+    max-height: 300px;
+    overflow-y: auto;
+  }
+  .patient-item {
+    padding: 10px;
+    border-bottom: 1px solid var(--border);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.8rem;
+  }
+  .patient-item:last-child { border-bottom: none; }
+  .patient-id { color: var(--green); font-weight: bold; }
   @media (max-width: 600px) {
     .form-grid { grid-template-columns: 1fr; }
     .button-group { flex-direction: column; }
@@ -340,7 +361,7 @@
       <div class="card">
         <div class="card-title">New Patient Details</div>
         <div class="form-grid">
-          <div class="form-group"><label>Full Name</label><input type="text" id="reg-name" placeholder="e.g. Shangase SS"></div>
+          <div class="form-group"><label>Full Name</label><input type="text" id="reg-name" placeholder="e.g. John Doe"></div>
           <div class="form-group"><label>ID Number</label><input type="text" id="reg-id" placeholder="e.g. 9801015800088"></div>
           <div class="form-group"><label>Date of Birth</label><input type="date" id="reg-dob"></div>
           <div class="form-group"><label>Contact Number</label><input type="text" id="reg-contact" placeholder="e.g. 0821234567"></div>
@@ -359,9 +380,21 @@
         <div class="card"><div class="card-title">Appointment Booked</div><div id="appt-summary"></div></div>
       </div>
     </div>
+    
+    <!-- VISIBLE PATIENT DATABASE LIST -->
+    <div class="card mt-24">
+      <div class="card-title">📋 REGISTERED PATIENTS (Database)</div>
+      <div class="patient-list" id="patient-list">
+        <div class="text-dim text-center">No patients registered yet. Add one above.</div>
+      </div>
+      <div class="flex mt-16">
+        <button class="btn btn-outline" onclick="addDemoPatient()">➕ Add Demo Patient (PAT-298770)</button>
+        <button class="btn btn-danger" onclick="clearAllPatients()">🗑️ Clear All</button>
+      </div>
+    </div>
   </div>
 
-  <!-- KIOSK SECTION (Fixed Scanner) -->
+  <!-- KIOSK SECTION -->
   <div class="section" id="section-kiosk">
     <div class="page-title">Check-In Kiosk</div>
     <div class="page-sub">Patient self-service screen near clinic entrance.</div>
@@ -384,7 +417,7 @@
         </div>
         <div class="divider"></div>
         <div style="font-size:0.8rem;color:var(--text-dim);margin-bottom:12px;">No card? Enter your Patient ID:</div>
-        <div class="flex"><input type="text" id="manual-id-input" placeholder="Patient ID" style="flex:1;"><button class="btn btn-outline" onclick="manualKioskCheckin()">Check In</button></div>
+        <div class="flex"><input type="text" id="manual-id-input" placeholder="e.g. PAT-298770" style="flex:1;"><button class="btn btn-outline" onclick="manualKioskCheckin()">Check In</button></div>
       </div>
     </div>
     <div id="kiosk-success-view" style="display:none;"><div class="kiosk-screen"><div class="success-screen"><div class="success-icon">✓</div><div class="queue-number" id="kiosk-queue-num">—</div><div class="queue-label">Your Queue Number</div><div id="kiosk-patient-name">—</div><div id="kiosk-doctor">—</div><div id="kiosk-wait">—</div><button class="btn btn-outline" onclick="resetKiosk()">← Back</button></div></div></div>
@@ -395,7 +428,7 @@
     <div class="page-title">Receptionist Dashboard</div>
     <div class="dash-grid"><div class="stat-card"><div class="stat-value text-green" id="stat-checkedin">0</div><div class="stat-label">Checked In</div></div><div class="stat-card"><div class="stat-value" id="stat-waiting">0</div><div class="stat-label">Waiting</div></div><div class="stat-card"><div class="stat-value" id="stat-avgwait">0 min</div><div class="stat-label">Avg Wait</div></div></div>
     <div class="card"><div class="flex-between"><div class="card-title">Current Queue</div><button class="btn btn-outline" onclick="refreshDashboard()">↻ Refresh</button></div><div id="queue-empty">No patients checked in.</div><table class="queue-table" id="queue-table" style="display:none;"><thead><tr><th>#</th><th>Patient</th><th>Doctor</th><th>Wait</th><th>Source</th></tr></thead><tbody id="queue-tbody"></tbody></table></div>
-    <div class="card mt-24"><div class="card-title">Manual Check-In</div><div class="alert-box">⚠ For patients who cannot use the kiosk.</div><div class="flex"><input type="text" id="manual-search-id" placeholder="Patient ID"><button class="btn btn-primary" onclick="manualSearch()">Search</button></div><div id="manual-result"></div></div>
+    <div class="card mt-24"><div class="card-title">Manual Check-In</div><div class="alert-box">⚠ For patients who cannot use the kiosk.</div><div class="flex"><input type="text" id="manual-search-id" placeholder="Patient ID (e.g. PAT-298770)"><button class="btn btn-primary" onclick="manualSearch()">Search</button></div><div id="manual-result"></div></div>
   </div>
 
   <!-- SENSOR LOG SECTION -->
@@ -417,12 +450,62 @@ let currentRegistered = null;
 let autoScanEnabled = true;
 let qrLockout = false;
 
-// Verify jsQR loaded correctly (CRITICAL FIX)
+// DEMO PATIENT - PAT-298770
+function addDemoPatient() {
+  // Check if already exists
+  const exists = patients.find(p => p.patientId === 'PAT-298770');
+  if (exists) {
+    alert('Patient PAT-298770 already exists!');
+    updatePatientList();
+    return;
+  }
+  
+  const demoPatient = {
+    patientId: 'PAT-298770',
+    name: 'Demo Patient',
+    idNum: '9001015800088',
+    doctor: 'Dr Gwala',
+    appt: new Date().toISOString(),
+    checkedIn: false,
+    dob: '1990-01-01',
+    contact: '0821234567'
+  };
+  patients.push(demoPatient);
+  updatePatientList();
+  alert('✅ Demo patient PAT-298770 added! You can now scan the QR code.');
+}
+
+function clearAllPatients() {
+  if (confirm('⚠️ This will delete ALL registered patients. Are you sure?')) {
+    patients = [];
+    updatePatientList();
+    alert('All patients cleared.');
+  }
+}
+
+function updatePatientList() {
+  const container = document.getElementById('patient-list');
+  if (!container) return;
+  
+  if (patients.length === 0) {
+    container.innerHTML = '<div class="text-dim text-center">No patients registered yet. Add one above.</div>';
+    return;
+  }
+  
+  container.innerHTML = patients.map(p => `
+    <div class="patient-item">
+      <span class="patient-id">${p.patientId}</span> - ${p.name} (${p.doctor})
+      ${p.checkedIn ? '<span class="badge badge-green" style="margin-left:10px;">✓ Checked In</span>' : '<span class="badge badge-dim" style="margin-left:10px;">Pending</span>'}
+    </div>
+  `).join('');
+}
+
+// Verify jsQR loaded
 if (typeof jsQR === 'undefined') {
-  alert("ERROR: QR Scanner library failed to load. Please check your internet connection and refresh the page.");
+  alert("ERROR: QR Scanner library failed to load. Please check your internet connection.");
   console.error("jsQR library is not defined!");
 } else {
-  console.log("jsQR library loaded successfully!");
+  console.log("✅ jsQR library loaded successfully!");
 }
 
 // NAVIGATION
@@ -434,6 +517,7 @@ function showSection(name, evt) {
   if (name === 'kiosk') setTimeout(() => startCamera(), 100);
   else stopCamera();
   if (name === 'receptionist') refreshDashboard();
+  if (name === 'register') updatePatientList();
 }
 
 // REGISTRATION
@@ -442,11 +526,19 @@ function registerPatient() {
   const idNum = document.getElementById('reg-id').value.trim();
   const appt = document.getElementById('reg-appt').value;
   const doctor = document.getElementById('reg-doctor').value;
-  if (!name || !idNum || !appt || !doctor) { alert('Please fill all required fields.'); return; }
+  const dob = document.getElementById('reg-dob').value;
+  const contact = document.getElementById('reg-contact').value.trim();
+  
+  if (!name || !idNum || !appt || !doctor) { 
+    alert('Please fill all required fields.'); 
+    return; 
+  }
+  
   const patientId = 'PAT-' + Date.now().toString().slice(-6);
-  const patient = { patientId, name, idNum, doctor, appt, checkedIn: false };
+  const patient = { patientId, name, idNum, doctor, appt, dob, contact, checkedIn: false };
   patients.push(patient);
   currentRegistered = patient;
+  
   document.getElementById('register-form-view').style.display = 'none';
   document.getElementById('register-success-view').style.display = 'block';
   document.getElementById('card-name').textContent = name;
@@ -455,12 +547,28 @@ function registerPatient() {
   document.getElementById('qr-output').innerHTML = '';
   new QRCode(document.getElementById('qr-output'), { text: patientId, width: 150, height: 150, correctLevel: QRCode.CorrectLevel.H });
   document.getElementById('appt-summary').innerHTML = `<b>Patient ID:</b> ${patientId}<br><b>Doctor:</b> ${doctor}<br><b>Appointment:</b> ${new Date(appt).toLocaleString()}`;
+  
+  updatePatientList();
 }
+
 function resetRegister() {
   document.getElementById('register-form-view').style.display = 'block';
   document.getElementById('register-success-view').style.display = 'none';
+  document.getElementById('reg-name').value = '';
+  document.getElementById('reg-id').value = '';
+  document.getElementById('reg-dob').value = '';
+  document.getElementById('reg-contact').value = '';
+  document.getElementById('reg-appt').value = '';
+  document.getElementById('reg-doctor').value = '';
 }
-function downloadCard() { alert("PDF download would work here (library loaded)."); }
+
+function downloadCard() { 
+  if (currentRegistered) {
+    alert(`📄 PDF would download for ${currentRegistered.patientId}\n(jsPDF library loaded successfully)`);
+  } else {
+    alert('No patient data available');
+  }
+}
 
 // SCANNER STATUS
 function setScanStatus(state, message) {
@@ -477,7 +585,7 @@ function setScanStatus(state, message) {
   text.textContent = message;
 }
 
-// CAMERA AND SCANNING (FIXED)
+// CAMERA AND SCANNING
 async function startCamera() {
   if (cameraStream) return;
   setScanStatus('idle', 'Starting camera...');
@@ -495,14 +603,16 @@ async function startCamera() {
     if (scanInterval) clearInterval(scanInterval);
     if (autoScanEnabled) scanInterval = setInterval(scanFrame, 100);
   } catch (err) {
-    setScanStatus('error', 'Camera access denied or error');
+    setScanStatus('error', 'Camera access denied');
     console.error(err);
   }
 }
+
 function stopCamera() {
   if (cameraStream) { cameraStream.getTracks().forEach(t => t.stop()); cameraStream = null; }
   if (scanInterval) { clearInterval(scanInterval); scanInterval = null; }
 }
+
 function toggleAutoScan() {
   autoScanEnabled = !autoScanEnabled;
   const btn = document.getElementById('autoScanBtn');
@@ -516,10 +626,12 @@ function toggleAutoScan() {
     setScanStatus('idle', 'Auto-scan paused - use Capture button');
   }
 }
+
 function triggerCameraFocus() {
   setScanStatus('scanning', 'Focusing... Hold QR steady');
   setTimeout(() => { if (!qrLockout && autoScanEnabled) setScanStatus('scanning', 'Scanning...'); }, 1000);
 }
+
 function scanFrame() {
   if (qrLockout || !autoScanEnabled || typeof jsQR === 'undefined') return;
   const video = document.getElementById('camera-video');
@@ -540,6 +652,7 @@ function scanFrame() {
     }
   } catch(e) { console.warn("Scan error:", e); }
 }
+
 function captureAndAnalyzeQR() {
   if (!cameraStream) { setScanStatus('error', 'Camera not available'); return; }
   setScanStatus('processing', 'Capturing and analyzing...');
@@ -556,33 +669,54 @@ function captureAndAnalyzeQR() {
     const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: 'attemptBoth' });
     const elapsed = Math.round(performance.now() - startTime);
     if (code && code.data && code.data.startsWith('PAT-')) {
-      setScanStatus('detected', `QR detected in ${elapsed}ms! Processing...`);
+      setScanStatus('detected', `✅ QR detected in ${elapsed}ms! Processing...`);
       if (window.navigator.vibrate) window.navigator.vibrate(200);
       setTimeout(() => { stopCamera(); processCheckin(code.data, 'Manual_Capture'); }, 300);
     } else {
-      setScanStatus('error', `No QR found (${elapsed}ms). Center code and try again.`);
+      setScanStatus('error', `❌ No QR found (${elapsed}ms). Center code and try again.`);
       setTimeout(() => { if(autoScanEnabled && cameraStream) setScanStatus('scanning', 'Scanning...'); }, 2000);
     }
   } catch(e) { setScanStatus('error', 'Analysis error'); console.error(e); }
 }
+
 function manualKioskCheckin() {
   const idInput = document.getElementById('manual-id-input').value.trim();
-  if (!idInput) { alert('Enter Patient ID'); return; }
+  if (!idInput) { alert('Enter Patient ID (e.g. PAT-298770)'); return; }
   const patient = patients.find(p => p.patientId === idInput);
-  if (!patient) { alert('Patient not found. Please register first.'); return; }
+  if (!patient) { 
+    alert(`❌ Patient "${idInput}" not found!\n\nClick "Add Demo Patient" in Register tab first.`); 
+    return; 
+  }
   processCheckin(patient.patientId, 'Manual_Entry');
 }
+
 function processCheckin(patientId, source) {
+  console.log(`Processing check-in for: ${patientId} from source: ${source}`);
+  console.log(`Current patients:`, patients.map(p => p.patientId));
+  
   const patient = patients.find(p => p.patientId === patientId);
-  if (!patient) { setScanStatus('error', 'Patient not found!'); setTimeout(() => resetKiosk(), 2000); return; }
-  if (patient.checkedIn) { setScanStatus('error', 'Already checked in today'); setTimeout(() => resetKiosk(), 2000); return; }
+  if (!patient) { 
+    setScanStatus('error', `❌ Patient ${patientId} not found in database!`);
+    console.error(`Patient ${patientId} not found!`);
+    setTimeout(() => resetKiosk(), 2000); 
+    return; 
+  }
+  
+  if (patient.checkedIn) { 
+    setScanStatus('error', `⚠️ ${patient.name} already checked in today`); 
+    setTimeout(() => resetKiosk(), 2000); 
+    return; 
+  }
+  
   patient.checkedIn = true;
   const queuePos = queueCounter++;
   const waitMinutes = (queuePos - 1) * 12;
   queue.push({ queuePos, patient, checkInTime: new Date(), waitMinutes, source });
-  sensorLog.unshift({ id: 'SR-'+Date.now(), patientName: patient.name, queuePos, timestamp: new Date(), source });
+  sensorLog.unshift({ id: 'SR-'+Date.now(), patientName: patient.name, patientId: patient.patientId, queuePos, timestamp: new Date(), source });
   updateSensorLog();
-  setScanStatus('success', 'Check-in complete!');
+  updatePatientList();
+  
+  setScanStatus('success', `✅ ${patient.name} checked in! Queue #${queuePos}`);
   setTimeout(() => {
     document.getElementById('kiosk-scan-view').style.display = 'none';
     document.getElementById('kiosk-success-view').style.display = 'block';
@@ -592,16 +726,19 @@ function processCheckin(patientId, source) {
     document.getElementById('kiosk-wait').textContent = waitMinutes === 0 ? 'You are next!' : `Wait: ${waitMinutes} min`;
   }, 400);
 }
+
 function resetKiosk() {
   document.getElementById('kiosk-scan-view').style.display = 'block';
   document.getElementById('kiosk-success-view').style.display = 'none';
   document.getElementById('manual-id-input').value = '';
   qrLockout = false;
   autoScanEnabled = true;
-  document.getElementById('autoScanBtn').innerHTML = '⏸️ Pause Auto-Scan';
+  const btn = document.getElementById('autoScanBtn');
+  if (btn) btn.innerHTML = '⏸️ Pause Auto-Scan';
   if (cameraStream) stopCamera();
   startCamera();
 }
+
 function refreshDashboard() {
   document.getElementById('stat-checkedin').textContent = queue.length;
   document.getElementById('stat-waiting').textContent = queue.filter(q => q.status !== 'Done').length;
@@ -614,23 +751,33 @@ function refreshDashboard() {
   document.getElementById('queue-table').style.display = 'table';
   queue.forEach(e => { tbody.innerHTML += `<tr><td><b>${e.queuePos}</b></td><td>${e.patient.name}</td><td>${e.patient.doctor}</td><td>${e.waitMinutes === 0 ? 'Next' : e.waitMinutes+' min'}</td><td><span class="badge badge-green">${e.source}</span></td></tr>`; });
 }
+
 function manualSearch() {
   const id = document.getElementById('manual-search-id').value.trim();
   const patient = patients.find(p => p.patientId === id);
   const resultDiv = document.getElementById('manual-result');
-  if (!patient) { resultDiv.innerHTML = '<div class="alert-box">Patient not found</div>'; return; }
-  if (patient.checkedIn) { resultDiv.innerHTML = `<div class="alert-box" style="color:var(--green);">${patient.name} already checked in.</div>`; return; }
-  resultDiv.innerHTML = `<div class="card"><b>${patient.name}</b><br>Doctor: ${patient.doctor}<br><button class="btn btn-primary mt-24" onclick="receptionistCheckin('${patient.patientId}')">Check In</button></div>`;
+  if (!patient) { resultDiv.innerHTML = `<div class="alert-box">❌ Patient "${id}" not found. Click "Add Demo Patient" in Register tab.</div>`; return; }
+  if (patient.checkedIn) { resultDiv.innerHTML = `<div class="alert-box" style="color:var(--green);">✅ ${patient.name} already checked in.</div>`; return; }
+  resultDiv.innerHTML = `<div class="card"><b>${patient.name}</b><br>Patient ID: ${patient.patientId}<br>Doctor: ${patient.doctor}<br><button class="btn btn-primary mt-24" onclick="receptionistCheckin('${patient.patientId}')">✓ Check In</button></div>`;
 }
+
 function receptionistCheckin(pid) { processCheckin(pid, 'Receptionist'); refreshDashboard(); document.getElementById('manual-result').innerHTML = ''; }
+
 function updateSensorLog() {
   const container = document.getElementById('sensor-log-entries');
   if (!sensorLog.length) { document.getElementById('sensor-log-empty').style.display = 'block'; container.innerHTML = ''; return; }
   document.getElementById('sensor-log-empty').style.display = 'none';
-  container.innerHTML = sensorLog.map(r => `<div class="log-entry"><div class="log-dot"></div><div class="log-time">${r.timestamp.toLocaleTimeString()}</div><div class="log-text"><b>${r.id}</b> · ${r.patientName} · Queue #${r.queuePos}</div><div class="log-source">${r.source}</div></div>`).join('');
+  container.innerHTML = sensorLog.map(r => `<div class="log-entry"><div class="log-dot"></div><div class="log-time">${r.timestamp.toLocaleTimeString()}</div><div class="log-text"><b>${r.id}</b> · ${r.patientName} (${r.patientId}) · Queue #${r.queuePos}</div><div class="log-source">${r.source}</div></div>`).join('');
 }
-// Initial camera check
-setTimeout(() => { if(document.getElementById('section-kiosk').classList.contains('active')) startCamera(); }, 500);
+
+// Auto-add demo patient on load for testing
+setTimeout(() => {
+  if (patients.length === 0) {
+    addDemoPatient();
+  }
+  updatePatientList();
+}, 500);
+
 </script>
 </body>
 </html>
